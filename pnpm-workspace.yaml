@@ -1,0 +1,10 @@
+# This file is the source of truth for pnpm settings. pnpm 11 does not read the
+# "pnpm" field in package.json and reads only auth and registry settings from
+# .npmrc.
+#
+# esbuild is a transitive dependency of Vite and Vitest. Its postinstall fetches
+# a platform binary. pnpm blocks dependency build scripts by default and treats
+# an unapproved script as an install failure. The allowBuilds entry below permits
+# this script.
+allowBuilds:
+    esbuild: true
