@@ -1,4 +1,4 @@
-import { describe, expect, expectTypeOf, it, vi } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
 import { Block } from "../../src/block/block";
 import { defineBlock, defineSourceBlock } from "../../src/block/blockDefinition";
@@ -242,12 +242,13 @@ describe("NodeAsset", () => {
     });
 
     it("disposes acquired dependencies when resource creation fails", async () => {
-        const disposeDependency = vi.fn();
-        const disposeFailedResource = vi.fn();
+        const disposedResources: string[] = [];
         const dependency = {
             name: "acquired-dependency",
             create: () => ({}),
-            dispose: disposeDependency,
+            dispose: () => {
+                disposedResources.push("acquired-dependency");
+            },
         } satisfies Resource<object>;
         const failingResource = {
             name: "failing-resource",
@@ -255,7 +256,9 @@ describe("NodeAsset", () => {
             create: () => {
                 throw new Error("resource creation failed");
             },
-            dispose: disposeFailedResource,
+            dispose: () => {
+                disposedResources.push("failing-resource");
+            },
         } satisfies Resource<object, { readonly dependency: typeof dependency }>;
         const definition = defineBlock({
             type: "failing-resource-consumer",
@@ -268,24 +271,25 @@ describe("NodeAsset", () => {
         const nodeAsset = new NodeAsset({ name: "resource-creation-failure", outputBlock: block });
 
         await expect(nodeAsset.executeAsync()).rejects.toThrow();
-        expect(disposeDependency).toHaveBeenCalledOnce();
-        expect(disposeFailedResource).not.toHaveBeenCalled();
+        expect(disposedResources).toEqual(["acquired-dependency"]);
     });
 
     it("attempts every resource disposal when cleanup fails", async () => {
-        const disposeFirst = vi.fn();
-        const disposeSecond = vi.fn(() => {
-            throw new Error("resource cleanup failed");
-        });
+        const disposedResources: string[] = [];
         const firstResource = {
             name: "first-resource",
             create: () => ({}),
-            dispose: disposeFirst,
+            dispose: () => {
+                disposedResources.push("first-resource");
+            },
         } satisfies Resource<object>;
         const secondResource = {
             name: "second-resource",
             create: () => ({}),
-            dispose: disposeSecond,
+            dispose: () => {
+                disposedResources.push("second-resource");
+                throw new Error("resource cleanup failed");
+            },
         } satisfies Resource<object>;
         const definition = defineBlock({
             type: "cleanup-failure-consumer",
@@ -298,8 +302,8 @@ describe("NodeAsset", () => {
         const nodeAsset = new NodeAsset({ name: "resource-cleanup-failure", outputBlock: block });
 
         await expect(nodeAsset.executeAsync()).rejects.toThrow();
-        expect(disposeFirst).toHaveBeenCalledOnce();
-        expect(disposeSecond).toHaveBeenCalledOnce();
+        expect(disposedResources).toHaveLength(2);
+        expect(disposedResources).toEqual(expect.arrayContaining(["first-resource", "second-resource"]));
     });
 
     it("preserves execution and cleanup failures", async () => {

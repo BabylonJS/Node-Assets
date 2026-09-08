@@ -99,7 +99,7 @@ export class OutputPort<TType extends ConnectionPointType<unknown>> {
     /** Connects this output to an unconnected input with the same type descriptor. */
     public connectTo(input: InputPort<NoInfer<TType>>): void {
         if (this.type !== input.type) {
-            throw new Error(`Cannot connect connection point type "${this.type.id}" to "${input.type.id}".`);
+            throw new Error(`Cannot connect connection point types "${this.type.id}" and "${input.type.id}" because they do not use the same type descriptor instance.`);
         }
         if (input._source !== undefined) {
             throw new Error(`The input on block "${input._block.name}" is already connected.`);

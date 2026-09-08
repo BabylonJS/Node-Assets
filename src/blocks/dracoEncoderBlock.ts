@@ -88,9 +88,8 @@ async function initializeDefaultEncoderForNodeAsync(DracoEncoder: DracoEncoderCo
 async function createNodeEncoderModuleAsync(moduleFactory: DracoEncoderModuleFactory, wasmBinary: ArrayBuffer, wrapperDirectory: string): Promise<unknown> {
     const dirnameDescriptor = Object.getOwnPropertyDescriptor(globalThis, "__dirname");
     Object.defineProperty(globalThis, "__dirname", { configurable: true, value: wrapperDirectory });
-    let modulePromise: Promise<unknown>;
     try {
-        modulePromise = moduleFactory({ wasmBinary });
+        return await moduleFactory({ wasmBinary });
     } finally {
         if (dirnameDescriptor) {
             Object.defineProperty(globalThis, "__dirname", dirnameDescriptor);
@@ -98,7 +97,6 @@ async function createNodeEncoderModuleAsync(moduleFactory: DracoEncoderModuleFac
             Reflect.deleteProperty(globalThis, "__dirname");
         }
     }
-    return await modulePromise;
 }
 
 function isNode(): boolean {

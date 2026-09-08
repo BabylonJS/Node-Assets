@@ -147,8 +147,6 @@ const result = await asset.executeAsync();
 
 ### Method 2. Using execution context
 
-**Status: Deferred**
-
 You can also supply input values through a `NodeAssetContext`. These values are used per-execution.
 
 ```ts
@@ -180,17 +178,15 @@ Internally, `executeAsync` first reaches for the context values; if none given, 
 
 # Running against different inputs
 
-**Status: Deferred**
-
 Use one context per set of inputs.
 
 ```ts
 ...
 
-const first = asset.createContext();
+const first = new NodeAssetContext(asset);
 first.setInput(source, "https://assets.babylonjs.com/meshes/box.glb");
 
-const second = asset.createContext();
+const second = new NodeAssetContext(asset);
 second.setInput(source, "https://assets.babylonjs.com/meshes/BoomBox/BoomBox.gltf");
 ```
 
