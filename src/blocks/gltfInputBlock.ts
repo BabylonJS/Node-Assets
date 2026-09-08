@@ -2,7 +2,7 @@ import { Block, type BlockOptions } from "../block/block";
 import { defineBlock } from "../block/blockDefinition";
 import { BabylonSceneType, UrlType } from "../block/connectionPointType";
 import { NullEngineResource } from "../resources/nullEngineResource";
-import { fetchOrThrowAsync, isHttpUrl, loadSceneWithPluginAsync, toBase64 } from "./loadSceneWithPlugin";
+import { fetchOrThrowAsync, isHttpUrl, loadSceneWithPluginAsync, toBase64 } from "../helpers/loadSceneWithPlugin";
 
 const GltfInputBlockDefinition = /* @__PURE__ */ defineBlock({
     type: "input.gltf",
