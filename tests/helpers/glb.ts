@@ -8,7 +8,6 @@ export interface GlbJson {
     readonly extensionsUsed?: readonly string[];
     readonly images?: ReadonlyArray<{ readonly bufferView?: number; readonly mimeType?: string; readonly name?: string }>;
     readonly materials?: ReadonlyArray<{
-        readonly name?: string;
         readonly normalTexture?: {
             readonly index?: number;
         };
