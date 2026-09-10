@@ -2,7 +2,7 @@ import type { IDracoCodecConfiguration } from "@babylonjs/core/Meshes/Compressio
 
 import { Block, type BlockOptions } from "../block/block";
 import { defineSourceBlock } from "../block/blockDefinition";
-import { GltfMeshCompressionOptionsType, type GltfMeshCompressionOptions } from "../block/connectionPointType";
+import { createGltfMeshCompressionOptions, GltfMeshCompressionOptionsType, type GltfMeshCompressionOptions } from "../block/connectionPointType";
 
 const DracoEncoderBlockDefinition = /* @__PURE__ */ defineSourceBlock({
     type: "input.draco-encoder",
@@ -14,7 +14,7 @@ const DracoEncoderBlockDefinition = /* @__PURE__ */ defineSourceBlock({
         ]);
         await prepareDefaultEncoderForNodeAsync(DracoEncoder);
         RegisterKHR_draco_mesh_compression();
-        return { meshCompressionMethod: "Draco" };
+        return createGltfMeshCompressionOptions({ meshCompressionMethod: "Draco" });
     },
 });
 
