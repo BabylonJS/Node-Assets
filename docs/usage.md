@@ -24,6 +24,11 @@ Named by noun.
     - Output: output (BabylonScene)
     - Resources: Babylon glTF loader
     - Behavior: Uses the Babylon scene loader to load a glTF using NullEngine.
+- `ObjInputBlock`
+    - Input: `string` which is a URL (HTTPS or data) that points to an OBJ file.
+    - Output: output (BabylonScene)
+    - Resources: Babylon OBJ loader
+    - Behavior: Uses the Babylon scene loader to load an OBJ using NullEngine. For HTTP(S) OBJ URLs, referenced MTL files and supported relative textures are fetched automatically and embedded before loading. Data-URI OBJ inputs must be self-contained; relative MTL or texture references require an HTTP(S) base URL.
 - `StlInputBlock`
     - Input: `string` which is a URL (HTTPS or data) that points to an STL file.
     - Output: output (BabylonScene)
