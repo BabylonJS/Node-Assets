@@ -2,7 +2,7 @@ import { Block, type BlockOptions } from "../block/block";
 import { defineBlock } from "../block/blockDefinition";
 import { BabylonSceneType, UrlType } from "../block/connectionPointType";
 import { NullEngineResource } from "../resources/nullEngineResource";
-import { fetchOrThrowAsync, isHttpUrl, loadSceneWithPluginAsync, toBase64 } from "../helpers/loadSceneWithPlugin";
+import { fetchAsDataUriAsync, loadSingleFileSceneWithPluginAsync } from "../helpers/loadSceneWithPlugin";
 
 const GltfInputBlockDefinition = /* @__PURE__ */ defineBlock({
     type: "input.gltf",
@@ -11,31 +11,25 @@ const GltfInputBlockDefinition = /* @__PURE__ */ defineBlock({
     resources: {
         engine: NullEngineResource,
     },
-    runAsync: async (url, _config, { engine }) => {
-        if (!isHttpUrl(url)) {
-            return loadSceneWithPluginAsync(url, engine, () => import("@babylonjs/loaders/glTF/index.js"));
-        }
-
-        const abortController = new AbortController();
-        try {
-            const response = await fetchOrThrowAsync(url, abortController.signal);
-            const resolvedUrl = response.url || url;
-            const format = await readGltfResponseAsync(response, resolvedUrl);
-
-            return await loadSceneWithPluginAsync(format.source, engine, () => import("@babylonjs/loaders/glTF/index.js"), {
-                rootUrl: new URL(".", resolvedUrl).href,
-                pluginExtension: format.extension,
-                name: new URL(resolvedUrl).pathname.split("/").pop() ?? "",
-                pluginOptions: {
-                    gltf: {
-                        preprocessUrlAsync: (dependencyUrl) => fetchAsDataUriAsync(dependencyUrl, abortController.signal),
+    runAsync: (url, _config, { engine }) =>
+        loadSingleFileSceneWithPluginAsync(
+            url,
+            engine,
+            undefined,
+            () => import("@babylonjs/loaders/glTF/index.js"),
+            async (response, resolvedUrl, signal) => {
+                const format = await readGltfResponseAsync(response, resolvedUrl);
+                return {
+                    source: format.source,
+                    pluginExtension: format.extension,
+                    pluginOptions: {
+                        gltf: {
+                            preprocessUrlAsync: (dependencyUrl) => fetchAsDataUriAsync(dependencyUrl, signal),
+                        },
                     },
-                },
-            });
-        } finally {
-            abortController.abort();
-        }
-    },
+                };
+            }
+        ),
 });
 
 /** Loads a glTF or GLB URL into a Babylon.js scene. */
@@ -104,15 +98,4 @@ function isGltfJson(json: string): boolean {
     } catch {
         return false;
     }
-}
-
-async function fetchAsDataUriAsync(url: string, signal: AbortSignal): Promise<string> {
-    if (!isHttpUrl(url)) {
-        return url;
-    }
-
-    const response = await fetchOrThrowAsync(url, signal);
-    const contentType = response.headers.get("content-type")?.split(";", 1)[0] || "application/octet-stream";
-    const data = new Uint8Array(await response.arrayBuffer());
-    return `data:${contentType};base64,${toBase64(data)}`;
 }
