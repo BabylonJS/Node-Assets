@@ -1,5 +1,5 @@
-import type { DracoEncoder } from "@babylonjs/core/Meshes/Compression/dracoEncoder.js";
 import type { Scene as BabylonScene } from "@babylonjs/core/scene.js";
+import type { IExportOptions } from "@babylonjs/serializers/glTF/2.0/glTFSerializer.js";
 
 declare const connectionPointData: unique symbol;
 
@@ -21,9 +21,13 @@ export const UrlType = /* @__PURE__ */ defineConnectionPointType<string>("url", 
 
 export const FileType = /* @__PURE__ */ defineConnectionPointType<File>("file", (value): value is File => value instanceof File);
 
-export const DracoEncoderType = /* @__PURE__ */ defineConnectionPointType<DracoEncoder>(
-    "draco-encoder",
-    (value): value is DracoEncoder => typeof value === "object" && value !== null && "encodeMeshAsync" in value && typeof value.encodeMeshAsync === "function"
+/** Per-export glTF mesh compression settings supplied by an opt-in compressor block. */
+export type GltfMeshCompressionOptions = Required<Pick<IExportOptions, "meshCompressionMethod">>;
+
+export const GltfMeshCompressionOptionsType = /* @__PURE__ */ defineConnectionPointType<GltfMeshCompressionOptions>(
+    "gltf-mesh-compression-options",
+    (value): value is GltfMeshCompressionOptions =>
+        typeof value === "object" && value !== null && "meshCompressionMethod" in value && (value.meshCompressionMethod === "None" || value.meshCompressionMethod === "Draco")
 );
 
 export const BabylonSceneType = /* @__PURE__ */ defineConnectionPointType<BabylonScene>(

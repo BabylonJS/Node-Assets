@@ -5,5 +5,6 @@ export { GltfInputBlock } from "./blocks/gltfInputBlock";
 export { GltfOutputBlock, type GltfOutputBlockOptions } from "./blocks/gltfOutputBlock";
 export { ObjInputBlock } from "./blocks/objInputBlock";
 export { StlInputBlock } from "./blocks/stlInputBlock";
+export type { GltfMeshCompressionOptions } from "./block/connectionPointType";
 export { NodeAsset } from "./nodeAsset/nodeAsset";
 export { NodeAssetContext } from "./nodeAsset/nodeAssetContext";

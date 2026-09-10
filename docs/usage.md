@@ -36,9 +36,9 @@ Named by noun.
     - Behavior: Uses the Babylon scene loader to load an STL using NullEngine.
 - `DracoEncoderBlock`
     - Input: none
-    - Output: output (DracoEncoder)
+    - Output: output (GltfMeshCompressionOptions)
     - Resources: Babylon default DracoEncoder
-    - Behavior: Attaches to `GltfOutputBlock`'s geometryCompression port. When present, sets the glTF export's `meshCompressionMethod` option to "Draco".
+    - Behavior: Prepares Babylon's default Draco encoder and provides `{ meshCompressionMethod: "Draco" }` as the per-export glTF mesh compression options that enable it. Connect its output to `GltfOutputBlock`'s `geometryCompressionOptions` port.
 
 # Transforms
 
@@ -55,10 +55,10 @@ Named by verb.
 Named by noun.
 
 - `GltfOutputBlock`
-    - Inputs: input (BabylonScene), geometryCompressor (DracoEncoder, optional)
+    - Inputs: input (BabylonScene), geometryCompressionOptions (GltfMeshCompressionOptions, optional)
     - Output: `File` which is a GLB
     - Resources: Babylon glTF exporter
-    - Behavior: Uses GLBExport to export scene to GLB. Grabs GLB file from return of the GLBExport function. If geometryCompressor is truthy, sets meshCompressionMethod export option to "Draco".
+    - Behavior: Uses GLBExport to export the scene to GLB and passes through any supplied mesh compression options. If `geometryCompressionOptions` is not connected, the export remains uncompressed.
 
 # Example: Hello, pipeline!
 
@@ -90,7 +90,7 @@ const destination = new GltfOutputBlock();
 
 source.output.connectTo(compressTextures.input);
 compressTextures.output.connectTo(destination.input);
-dracoEncoder.output.connectTo(destination.geometryCompressor);
+dracoEncoder.output.connectTo(destination.geometryCompressionOptions);
 
 const asset = new NodeAsset({
     name: "gltf-roundtrip",

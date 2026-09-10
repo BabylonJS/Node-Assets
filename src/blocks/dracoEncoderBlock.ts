@@ -1,25 +1,24 @@
 import type { IDracoCodecConfiguration } from "@babylonjs/core/Meshes/Compression/dracoCodec.js";
-import type { DracoEncoder as BabylonDracoEncoder } from "@babylonjs/core/Meshes/Compression/dracoEncoder.js";
 
 import { Block, type BlockOptions } from "../block/block";
 import { defineSourceBlock } from "../block/blockDefinition";
-import { DracoEncoderType } from "../block/connectionPointType";
+import { GltfMeshCompressionOptionsType, type GltfMeshCompressionOptions } from "../block/connectionPointType";
 
 const DracoEncoderBlockDefinition = /* @__PURE__ */ defineSourceBlock({
     type: "input.draco-encoder",
-    output: DracoEncoderType,
-    runAsync: async () => {
+    output: GltfMeshCompressionOptionsType,
+    runAsync: async (): Promise<GltfMeshCompressionOptions> => {
         const [{ DracoEncoder }, { RegisterKHR_draco_mesh_compression }] = await Promise.all([
             import("@babylonjs/core/Meshes/Compression/dracoEncoder.js"),
             import("@babylonjs/serializers/glTF/2.0/Extensions/KHR_draco_mesh_compression.pure.js"),
         ]);
         await prepareDefaultEncoderForNodeAsync(DracoEncoder);
         RegisterKHR_draco_mesh_compression();
-        return DracoEncoder.Default;
+        return { meshCompressionMethod: "Draco" };
     },
 });
 
-/** Provides Babylon.js's default Draco encoder for glTF geometry compression. */
+/** Prepares Babylon.js's default Draco encoder and provides glTF mesh compression options that enable it. */
 export class DracoEncoderBlock extends Block<typeof DracoEncoderBlockDefinition> {
     public constructor(options?: BlockOptions<typeof DracoEncoderBlockDefinition>) {
         super(DracoEncoderBlockDefinition, options);
@@ -28,7 +27,6 @@ export class DracoEncoderBlock extends Block<typeof DracoEncoderBlockDefinition>
 
 interface DracoEncoderConstructor {
     DefaultConfiguration: IDracoCodecConfiguration;
-    readonly Default: BabylonDracoEncoder;
     ResetDefault(skipDispose?: boolean): void;
 }
 
