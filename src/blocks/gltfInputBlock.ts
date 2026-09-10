@@ -2,7 +2,7 @@ import { Block, type BlockOptions } from "../block/block";
 import { defineBlock } from "../block/blockDefinition";
 import { BabylonSceneType, UrlType } from "../block/connectionPointType";
 import { NullEngineResource } from "../resources/nullEngineResource";
-import { fetchOrThrowAsync, isHttpUrl, loadSceneWithPluginAsync, toBase64 } from "../helpers/loadSceneWithPlugin";
+import { fetchAsDataUriAsync, fetchOrThrowAsync, isHttpUrl, loadSceneWithPluginAsync } from "../helpers/loadSceneWithPlugin";
 
 const GltfInputBlockDefinition = /* @__PURE__ */ defineBlock({
     type: "input.gltf",
@@ -28,7 +28,8 @@ const GltfInputBlockDefinition = /* @__PURE__ */ defineBlock({
                 name: new URL(resolvedUrl).pathname.split("/").pop() ?? "",
                 pluginOptions: {
                     gltf: {
-                        preprocessUrlAsync: (dependencyUrl) => fetchAsDataUriAsync(dependencyUrl, abortController.signal),
+                        preprocessUrlAsync: (dependencyUrl) =>
+                            isHttpUrl(dependencyUrl) ? fetchAsDataUriAsync(dependencyUrl, abortController.signal) : Promise.resolve(dependencyUrl),
                     },
                 },
             });
@@ -104,15 +105,4 @@ function isGltfJson(json: string): boolean {
     } catch {
         return false;
     }
-}
-
-async function fetchAsDataUriAsync(url: string, signal: AbortSignal): Promise<string> {
-    if (!isHttpUrl(url)) {
-        return url;
-    }
-
-    const response = await fetchOrThrowAsync(url, signal);
-    const contentType = response.headers.get("content-type")?.split(";", 1)[0] || "application/octet-stream";
-    const data = new Uint8Array(await response.arrayBuffer());
-    return `data:${contentType};base64,${toBase64(data)}`;
 }

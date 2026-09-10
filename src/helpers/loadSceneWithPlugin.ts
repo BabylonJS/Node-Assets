@@ -16,14 +16,11 @@ export async function loadSingleFileSceneWithPluginAsync(url: string, engine: Ab
 
     const abortController = new AbortController();
     try {
-        const response = await fetchOrThrowAsync(url, abortController.signal);
-        const resolvedUrl = response.url || url;
-        const contentType = response.headers.get("content-type")?.split(";", 1)[0] || "application/octet-stream";
-        const source = `data:${contentType};base64,${toBase64(new Uint8Array(await response.arrayBuffer()))}`;
-        return await loadSceneWithPluginAsync(source, engine, loadPluginAsync, {
-            rootUrl: new URL(".", resolvedUrl).href,
+        const fetched = await fetchAsDataUriWithUrlAsync(url, abortController.signal);
+        return await loadSceneWithPluginAsync(fetched.dataUri, engine, loadPluginAsync, {
+            rootUrl: new URL(".", fetched.url).href,
             pluginExtension,
-            name: new URL(resolvedUrl).pathname.split("/").pop() ?? "",
+            name: new URL(fetched.url).pathname.split("/").pop() ?? "",
         });
     } finally {
         abortController.abort();
@@ -41,6 +38,21 @@ export async function fetchOrThrowAsync(url: string, signal: AbortSignal): Promi
         throw new Error(`Failed to fetch "${url}": HTTP ${response.status} ${response.statusText}`.trim());
     }
     return response;
+}
+
+export async function fetchAsDataUriAsync(url: string, signal: AbortSignal): Promise<string> {
+    return (await fetchAsDataUriWithUrlAsync(url, signal)).dataUri;
+}
+
+export async function fetchAsDataUriWithUrlAsync(url: string, signal: AbortSignal): Promise<{ readonly dataUri: string; readonly url: string }> {
+    const response = await fetchOrThrowAsync(url, signal);
+    const contentType = response.headers.get("content-type")?.split(";", 1)[0] || "application/octet-stream";
+    const dataUri = createDataUri(new Uint8Array(await response.arrayBuffer()), contentType);
+    return { dataUri, url: response.url || url };
+}
+
+export function createDataUri(data: Uint8Array, contentType: string): string {
+    return `data:${contentType};base64,${toBase64(data)}`;
 }
 
 export function toBase64(data: Uint8Array): string {
