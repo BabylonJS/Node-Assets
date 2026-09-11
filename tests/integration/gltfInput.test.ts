@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { GltfInputBlock, GltfOutputBlock, NodeAsset, NodeAssetContext } from "../../src/index";
 import { parseGlbAsync } from "../helpers/glb";
-import { generateGlbDataUri, generateGltfDataUri } from "../helpers/gltf";
+import { generateGlbDataUri, generateGltfDataUri, generateUnlitGltfDataUri } from "../helpers/gltf";
 
 describe("glTF input", () => {
     it.each([
@@ -21,6 +21,12 @@ describe("glTF input", () => {
         context.setInput(source, generateGltfDataUri());
 
         await parseGlbAsync(await asset.executeAsync(context));
+    });
+
+    it("loads and exports required KHR_materials_unlit behavior", async () => {
+        const parsed = await parseGlbAsync(await roundTripAsync(generateUnlitGltfDataUri()));
+        expect(parsed.json.extensionsUsed).toContain("KHR_materials_unlit");
+        expect(parsed.json.materials?.[0]?.extensions).toHaveProperty("KHR_materials_unlit");
     });
 
     it.each([
