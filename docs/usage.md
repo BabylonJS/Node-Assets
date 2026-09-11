@@ -23,7 +23,7 @@ Named by noun.
     - Input: `string` which is a URL (HTTPS or data) that points to a glTF or GLB.
     - Output: output (BabylonScene)
     - Resources: Babylon glTF loader
-    - Behavior: Uses the Babylon scene loader to load a glTF using NullEngine.
+    - Behavior: Uses the Babylon scene loader to load a glTF using NullEngine. The glTF 2 loader and each built-in extension implementation load on demand.
 - `ObjInputBlock`
     - Input: `string` which is a URL (HTTPS or data) that points to an OBJ file.
     - Output: output (BabylonScene)

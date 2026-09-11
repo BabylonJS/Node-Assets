@@ -27,7 +27,7 @@ describe("glTF input consumer bundle", () => {
                 write: false,
             },
         });
-        if (Array.isArray(result)) {
+        if (Array.isArray(result) || !("output" in result)) {
             throw new Error("Expected one consumer bundle");
         }
 
