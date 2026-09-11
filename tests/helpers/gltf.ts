@@ -1,9 +1,17 @@
+const PNG_DATA = "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEUlEQVQImWP4z8DwH4QZYAwAR8oH+Xm0fdIAAAAASUVORK5CYII=";
+
 export function generateGltfDataUri(): string {
     return `data:${generateGltfJson()}`;
 }
 
-export function generateTexturedGltfDataUri(): string {
-    const png = "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEUlEQVQImWP4z8DwH4QZYAwAR8oH+Xm0fdIAAAAASUVORK5CYII=";
+interface TexturedGltfOptions {
+    readonly imageBase64?: string;
+    readonly imageMimeType?: string;
+    readonly textureExtension?: "EXT_texture_avif" | "EXT_texture_webp";
+}
+
+export function generateTexturedGltfDataUri(options: TexturedGltfOptions = {}): string {
+    const { imageBase64 = PNG_DATA, imageMimeType = "image/png", textureExtension } = options;
     const binary = "AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAABAAIA";
     return `data:${JSON.stringify({
         asset: { version: "2.0" },
@@ -20,7 +28,8 @@ export function generateTexturedGltfDataUri(): string {
             { buffer: 0, byteLength: 24, byteOffset: 72 },
             { buffer: 0, byteLength: 6, byteOffset: 96 },
         ],
-        images: [{ uri: `data:image/png;base64,${png}` }],
+        ...(textureExtension === undefined ? {} : { extensionsRequired: [textureExtension], extensionsUsed: [textureExtension] }),
+        images: [{ uri: `data:${imageMimeType};base64,${imageBase64}` }],
         materials: [
             {
                 emissiveTexture: { index: 0 },
@@ -34,7 +43,16 @@ export function generateTexturedGltfDataUri(): string {
         samplers: [{ magFilter: 9729 }],
         scene: 0,
         scenes: [{ nodes: [0] }],
-        textures: [{ sampler: 0, source: 0 }],
+        textures: [
+            textureExtension === undefined
+                ? { sampler: 0, source: 0 }
+                : {
+                      extensions: {
+                          [textureExtension]: { source: 0 },
+                      },
+                      sampler: 0,
+                  },
+        ],
     })}`;
 }
 
