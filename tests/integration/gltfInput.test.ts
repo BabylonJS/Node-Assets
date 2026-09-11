@@ -29,6 +29,14 @@ describe("glTF input", () => {
         expect(parsed.json.materials?.[0]?.extensions).toHaveProperty("KHR_materials_unlit");
     });
 
+    it("restores a removed built-in extension before loading", async () => {
+        const { unregisterGLTFExtension } = await import("@babylonjs/loaders/glTF/2.0/glTFLoaderExtensionRegistry.js");
+        unregisterGLTFExtension("KHR_materials_unlit");
+
+        const parsed = await parseGlbAsync(await roundTripAsync(generateUnlitGltfDataUri()));
+        expect(parsed.json.materials?.[0]?.extensions).toHaveProperty("KHR_materials_unlit");
+    });
+
     it("supports concurrent loads", async () => {
         const outputs = await Promise.all([roundTripAsync(generateGltfDataUri()), roundTripAsync(generateGlbDataUri())]);
 
