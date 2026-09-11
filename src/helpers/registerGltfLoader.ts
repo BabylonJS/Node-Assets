@@ -9,8 +9,7 @@ let gltfLoaderModulesPromise: Promise<GltfLoaderModules> | undefined;
 const GltfLoaderPluginFactory = {
     ...GLTFFileLoaderMetadata,
     async createPlugin(options) {
-        const [{ GLTFFileLoader, RegisterGLTF2Loader }, { registerBuiltInGLTFExtensions }, { registeredGLTFExtensions }, { RegisterInstancedMesh }] =
-            await loadGltfLoaderModulesAsync();
+        const { GLTFFileLoader, RegisterGLTF2Loader, RegisterInstancedMesh, registerBuiltInGLTFExtensions, registeredGLTFExtensions } = await loadGltfLoaderModulesAsync();
         RegisterInstancedMesh();
         RegisterGLTF2Loader();
         ensureBuiltInExtensionsRegistered(registeredGLTFExtensions, registerBuiltInGLTFExtensions);
@@ -19,7 +18,7 @@ const GltfLoaderPluginFactory = {
 } satisfies ISceneLoaderPluginFactory;
 
 export async function registerGltfLoaderAsync(): Promise<void> {
-    const { RegisterSceneLoaderPlugin } = await import("@babylonjs/core/Loading/sceneLoader.js");
+    const [{ RegisterSceneLoaderPlugin }] = await Promise.all([import("@babylonjs/core/Loading/sceneLoader.js"), loadGltfLoaderModulesAsync()]);
     RegisterSceneLoaderPlugin(GltfLoaderPluginFactory);
 }
 
@@ -37,17 +36,12 @@ function loadGltfLoaderModulesAsync(): Promise<GltfLoaderModules> {
 }
 
 function importGltfLoaderModulesAsync() {
-    return Promise.all([
-        import("@babylonjs/loaders/glTF/2.0/glTFLoader.pure.js"),
-        import("@babylonjs/loaders/glTF/2.0/Extensions/dynamic.js"),
-        import("@babylonjs/loaders/glTF/2.0/glTFLoaderExtensionRegistry.js"),
-        import("@babylonjs/core/Meshes/instancedMesh.pure.js"),
-    ] as const);
+    return import("./gltfLoaderImplementation");
 }
 
 function ensureBuiltInExtensionsRegistered(
-    registeredExtensions: GltfLoaderModules[2]["registeredGLTFExtensions"],
-    registerBuiltInExtensions: GltfLoaderModules[1]["registerBuiltInGLTFExtensions"]
+    registeredExtensions: GltfLoaderModules["registeredGLTFExtensions"],
+    registerBuiltInExtensions: GltfLoaderModules["registerBuiltInGLTFExtensions"]
 ): void {
     if (builtInExtensionRegistrations !== undefined && Array.from(builtInExtensionRegistrations).every(([name, registration]) => registeredExtensions.get(name) === registration)) {
         return;
