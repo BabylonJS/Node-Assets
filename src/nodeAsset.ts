@@ -74,7 +74,7 @@ export class NodeAsset<TOutput extends AnyBlock> {
         return this.#ownedSceneScopes.get(scene)?.disposeAsync() ?? Promise.resolve();
     }
 
-    /** Disposes this node asset without modifying its blocks. */
+    /** Prevents new executions without releasing retained terminal-scene resources. */
     public dispose(): void {
         this.#isDisposed = true;
     }

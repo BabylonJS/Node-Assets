@@ -163,7 +163,7 @@ const asset = new NodeAsset({
 
 const scene = await asset.executeAsync();
 try {
-    scene.render();
+    console.log(scene.meshes.length);
 } finally {
     await asset.disposeSceneAsync(scene);
 }

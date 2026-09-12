@@ -380,24 +380,66 @@ describe("NodeAsset", () => {
         expect(cleanupCount).toBe(2);
     });
 
+    it("publishes the cleanup promise before resource disposal can reenter", async () => {
+        let cleanupCount = 0;
+        const engineResource = {
+            name: "reentrant-engine",
+            create: () => new NullEngine(),
+            dispose: (engine) => {
+                cleanupCount++;
+                engine.dispose();
+            },
+        } satisfies Resource<NullEngine>;
+        const definition = defineSourceBlock({
+            type: "reentrant-scene",
+            output: BabylonSceneType,
+            resources: { engine: engineResource },
+            run: (_config, { engine }) => new Scene(engine),
+        });
+        const asset = new NodeAsset({ name: "reentrant-scene", outputBlock: new Block(definition) });
+        const scene = await asset.executeAsync();
+        let reentrantCleanup: Promise<void> | undefined;
+        let didReenter = false;
+        scene.onDisposeObservable.add(() => {
+            if (!didReenter) {
+                didReenter = true;
+                reentrantCleanup = asset.disposeSceneAsync(scene);
+            }
+        });
+
+        const cleanup = asset.disposeSceneAsync(scene);
+        await cleanup;
+
+        expect(reentrantCleanup).toBe(cleanup);
+        expect(cleanupCount).toBe(1);
+    });
+
     it("caches aggregate terminal-scene cleanup failures", async () => {
-        const cleanupError = new Error("terminal cleanup failed");
+        const firstCleanupError = new Error("first terminal cleanup failed");
+        const secondCleanupError = new Error("second terminal cleanup failed");
         const engineResource = {
             name: "cleanup-failure-engine",
             create: () => new NullEngine(),
             dispose: (engine) => engine.dispose(),
         } satisfies Resource<NullEngine>;
-        const failingResource = {
-            name: "failing-terminal-resource",
+        const firstFailingResource = {
+            name: "first-failing-terminal-resource",
             create: () => ({}),
             dispose: () => {
-                throw cleanupError;
+                throw firstCleanupError;
+            },
+        } satisfies Resource<object>;
+        const secondFailingResource = {
+            name: "second-failing-terminal-resource",
+            create: () => ({}),
+            dispose: () => {
+                throw secondCleanupError;
             },
         } satisfies Resource<object>;
         const definition = defineSourceBlock({
             type: "failing-cleanup-scene",
             output: BabylonSceneType,
-            resources: { engine: engineResource, failingResource },
+            resources: { engine: engineResource, firstFailingResource, secondFailingResource },
             run: (_config, { engine }) => new Scene(engine),
         });
         const asset = new NodeAsset({ name: "failing-cleanup-scene", outputBlock: new Block(definition) });
@@ -409,7 +451,7 @@ describe("NodeAsset", () => {
 
         expect(firstCleanup).toBe(secondCleanup);
         expect(error).toBeInstanceOf(AggregateError);
-        expect((error as AggregateError).errors).toEqual([cleanupError]);
+        expect((error as AggregateError).errors).toEqual([secondCleanupError, firstCleanupError]);
         expect(scene.isDisposed).toBe(true);
         await expect(secondCleanup).rejects.toBe(error);
         expect(asset.disposeSceneAsync(scene)).toBe(firstCleanup);

@@ -24,13 +24,14 @@ export class ResourceScope {
     }
 
     public disposeAsync(): Promise<void> {
-        this.#disposal ??= this.#disposeAsync();
+        if (this.#disposal === undefined) {
+            this.#isDisposed = true;
+            this.#disposal = Promise.resolve().then(() => this.#disposeAsync());
+        }
         return this.#disposal;
     }
 
     async #disposeAsync(): Promise<void> {
-        this.#isDisposed = true;
-
         const errors: unknown[] = [];
         for (let index = this.#acquired.length - 1; index >= 0; index--) {
             const acquired = this.#acquired[index];
