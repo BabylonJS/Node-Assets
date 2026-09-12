@@ -105,6 +105,11 @@ describe("OBJ input", () => {
                         material.diffuseTexture.metadata = { source: "obj" };
                         material.diffuseTexture.hasAlpha = true;
                         material.diffuseTexture.getAlphaFromRGB = true;
+                        material.diffuseTexture.isRGBD = true;
+                        material.diffuseTexture.lodLevelInAlpha = true;
+                        material.diffuseTexture.lodGenerationOffset = 0.25;
+                        material.diffuseTexture.lodGenerationScale = 0.75;
+                        material.diffuseTexture.linearSpecularLOD = true;
                         material.diffuseTexture.level = 0.75;
                         material.diffuseTexture.uOffset = 0.25;
                         material.diffuseTexture.vOffset = 0.5;
@@ -123,6 +128,7 @@ describe("OBJ input", () => {
                         material.reflectionTexture = material.diffuseTexture;
                         material.refractionTexture = material.diffuseTexture;
                         material.bumpTexture.metadata = { source: "obj-normal" };
+                        scene.environmentTexture = material.diffuseTexture;
 
                         const preservedMaterial = new StandardMaterial("non-image-texture", scene);
                         preservedRawTexture = RawTexture.CreateRGBATexture(new Uint8Array([255, 255, 255, 255]), 1, 1, scene);
@@ -158,6 +164,11 @@ describe("OBJ input", () => {
                         expect(sharedTexture.metadata).toEqual({ source: "obj" });
                         expect(sharedTexture.hasAlpha).toBe(true);
                         expect(sharedTexture.getAlphaFromRGB).toBe(true);
+                        expect(sharedTexture.isRGBD).toBe(true);
+                        expect(sharedTexture.lodLevelInAlpha).toBe(true);
+                        expect(sharedTexture.lodGenerationOffset).toBe(0.25);
+                        expect(sharedTexture.lodGenerationScale).toBe(0.75);
+                        expect(sharedTexture.linearSpecularLOD).toBe(true);
                         expect(sharedTexture.level).toBe(0.75);
                         expect(sharedTexture.uOffset).toBe(0.25);
                         expect(sharedTexture.vOffset).toBe(0.5);
@@ -170,6 +181,8 @@ describe("OBJ input", () => {
                         expect(material.bumpTexture).not.toBe(sharedTexture);
                         expect(material.bumpTexture.metadata).toEqual({ source: "obj-normal" });
                         expect(material.bumpTexture.level).toBe(0.5);
+                        expect(scene.environmentTexture).toBe(originalSharedTexture);
+                        expect(originalSharedTexture?.getInternalTexture()).not.toBeNull();
                         expect(preservedMaterial.diffuseTexture).toBe(preservedRawTexture);
                         return scene;
                     },

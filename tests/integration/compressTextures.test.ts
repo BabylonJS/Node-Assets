@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 
+import { Block } from "../../src/block/block";
+import { defineBlock } from "../../src/block/blockDefinition";
+import { BabylonSceneType } from "../../src/block/connectionPointType";
 import { CompressTexturesBlock, GltfInputBlock, GltfOutputBlock, NodeAsset } from "../../src/index";
 import { expectKtx2Image, parseGlbAsync } from "../helpers/glb";
 import { generateTexturedGltfDataUri } from "../helpers/gltf";
@@ -25,6 +28,31 @@ describe("texture compression", () => {
         expect(parsed.json.extensionsUsed).toContain("KHR_texture_basisu");
         expect(parsed.json.extensionsRequired).toContain("KHR_texture_basisu");
         expect(parsed.json.images?.every(({ mimeType }) => mimeType === "image/ktx2")).toBe(true);
+        expectKtx2Image(parsed);
+    });
+
+    it("loads compressed replacements when the scene uses delayed texture loading", async () => {
+        const source = new GltfInputBlock({ input: generateTexturedGltfDataUri() });
+        const enableDelayedLoading = new Block(
+            defineBlock({
+                type: "test.transform.enable-delayed-texture-loading",
+                input: BabylonSceneType,
+                output: BabylonSceneType,
+                run: (scene) => {
+                    scene.useDelayedTextureLoading = true;
+                    return scene;
+                },
+            })
+        );
+        const compressTextures = new CompressTexturesBlock();
+        const destination = new GltfOutputBlock();
+        source.output.connectTo(enableDelayedLoading.input);
+        enableDelayedLoading.output.connectTo(compressTextures.input);
+        compressTextures.output.connectTo(destination.input);
+
+        const parsed = await parseGlbAsync(await new NodeAsset({ name: "delayed-texture-compression", outputBlock: destination }).executeAsync());
+
+        expect(parsed.json.extensionsUsed).toContain("KHR_texture_basisu");
         expectKtx2Image(parsed);
     });
 });

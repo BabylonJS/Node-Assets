@@ -32,6 +32,23 @@ interface TextureEncodingSemantics {
     readonly isSetKTX2SRGBTransferFunc: boolean;
 }
 
+interface SourceImage {
+    readonly data: ArrayBuffer;
+    readonly mimeType: string;
+}
+
+interface SourceTextureEntry {
+    readonly referencesBySemantics: ReadonlyMap<boolean, readonly TextureReference[]>;
+    readonly texture: Texture;
+}
+
+interface SourceTextureGroup {
+    readonly entries: SourceTextureEntry[];
+    readonly sourceKey: number;
+}
+
+const MaximumConcurrentSourceLoads = 8;
+
 function createCompressTexturesBlockDefinition() {
     return defineBlock({
         type: "transform.compress-textures",
@@ -42,26 +59,31 @@ function createCompressTexturesBlockDefinition() {
 }
 
 async function compressTexturesAsync(scene: BabylonScene): Promise<BabylonScene> {
-    const [{ PBRMaterial }, { StandardMaterial }, { Texture }, { GetMimeType }, { GetCachedImageAsync }, { RegisterKHR_texture_basisu }] = await Promise.all([
+    const [{ PBRMaterial }, { Texture }, { GetCachedImageAsync }, { RegisterKHR_texture_basisu }] = await Promise.all([
         import("@babylonjs/core/Materials/PBR/pbrMaterial.js"),
-        import("@babylonjs/core/Materials/standardMaterial.js"),
         import("@babylonjs/core/Materials/Textures/texture.js"),
-        import("@babylonjs/core/Misc/fileTools.js"),
         import("@babylonjs/serializers/exportImageUtils.js"),
         import("@babylonjs/serializers/glTF/2.0/Extensions/KHR_texture_basisu.pure.js"),
     ]);
+    const StandardMaterialConstructor = scene.materials.some((material) => material.getClassName() === "StandardMaterial")
+        ? (await import("@babylonjs/core/Materials/standardMaterial.js")).StandardMaterial
+        : undefined;
 
     RegisterKHR_texture_basisu();
 
     const referencesByTexture = new Map<Texture, Map<boolean, TextureReference[]>>();
     for (const material of scene.materials) {
         const references =
-            material instanceof PBRMaterial ? getPbrTextureReferences(material) : material instanceof StandardMaterial ? getStandardTextureReferences(material) : undefined;
+            material instanceof PBRMaterial
+                ? getPbrTextureReferences(material)
+                : StandardMaterialConstructor !== undefined && material instanceof StandardMaterialConstructor
+                  ? getStandardTextureReferences(material)
+                  : undefined;
         if (references === undefined) {
             continue;
         }
         for (const reference of references) {
-            if (!(reference.texture instanceof Texture) || reference.texture.constructor !== Texture) {
+            if (!(reference.texture instanceof Texture) || reference.texture.isCube || reference.texture.is3D || reference.texture.is2DArray || reference.texture.isRenderTarget) {
                 continue;
             }
             const referencesBySemantics = referencesByTexture.get(reference.texture) ?? new Map<boolean, TextureReference[]>();
@@ -72,54 +94,61 @@ async function compressTexturesAsync(scene: BabylonScene): Promise<BabylonScene>
         }
     }
 
-    const encodedBySource = new Map<object | string, Map<string, Promise<Uint8Array>>>();
-    const sourceIndexByIdentity = new Map<object | string, number>();
+    const sourceGroupsByIdentity = new Map<object | string, SourceTextureGroup>();
     for (const [sourceTexture, referencesBySemantics] of referencesByTexture) {
-        let cachedImage = await GetCachedImageAsync(sourceTexture);
-        const sourceUrl = sourceTexture.url;
-        const sourceMimeType = sourceTexture.mimeType ?? (sourceUrl === null ? undefined : GetMimeType(sourceUrl)) ?? "";
-        if (cachedImage === null && sourceUrl !== null && sourceUrl.length > 0 && sourceMimeType.startsWith("image/")) {
-            const response = await fetch(sourceUrl);
-            if (!response.ok) {
-                throw new Error(`Failed to load texture "${sourceUrl}": HTTP ${response.status} ${response.statusText}`.trim());
-            }
-            cachedImage = { data: await response.arrayBuffer(), mimeType: sourceMimeType };
+        const sourceIdentity = getSourceImageIdentity(sourceTexture);
+        let sourceGroup = sourceGroupsByIdentity.get(sourceIdentity);
+        if (sourceGroup === undefined) {
+            sourceGroup = {
+                entries: [],
+                sourceKey: sourceTexture.uniqueId,
+            };
+            sourceGroupsByIdentity.set(sourceIdentity, sourceGroup);
         }
-        if (cachedImage === null) {
-            continue;
-        }
+        sourceGroup.entries.push({ referencesBySemantics, texture: sourceTexture });
+    }
 
-        const source = new Uint8Array(cachedImage.data);
-        if (cachedImage.mimeType === "image/ktx2" || isKtx2(source)) {
-            continue;
-        }
+    const sourceGroups = Array.from(sourceGroupsByIdentity.values());
+    for (let batchStart = 0; batchStart < sourceGroups.length; batchStart += MaximumConcurrentSourceLoads) {
+        const batch = sourceGroups.slice(batchStart, batchStart + MaximumConcurrentSourceLoads);
+        const sourceImages = await Promise.all(
+            batch.map(({ entries }) =>
+                getSourceImageAsync(
+                    entries.map(({ texture }) => texture),
+                    GetCachedImageAsync
+                )
+            )
+        );
 
-        const sourceIdentity = getSourceImageIdentity(sourceTexture, cachedImage.data);
-        let sourceIndex = sourceIndexByIdentity.get(sourceIdentity);
-        if (sourceIndex === undefined) {
-            sourceIndex = sourceIndexByIdentity.size;
-            sourceIndexByIdentity.set(sourceIdentity, sourceIndex);
-        }
-        for (const [isNormalMap, references] of referencesBySemantics) {
-            const semantics = getTextureEncodingSemantics(sourceTexture.gammaSpace, isNormalMap);
-            const semanticsKey = `${semantics.isPerceptual}:${semantics.isNormalMap}`;
-            let encodesBySemantics = encodedBySource.get(sourceIdentity);
-            if (encodesBySemantics === undefined) {
-                encodesBySemantics = new Map<string, Promise<Uint8Array>>();
-                encodedBySource.set(sourceIdentity, encodesBySemantics);
-            }
-            let encoded = encodesBySemantics.get(semanticsKey);
-            if (encoded === undefined) {
-                encoded = encodeToKtx2Async(source, semantics);
-                encodesBySemantics.set(semanticsKey, encoded);
+        for (const [batchIndex, sourceGroup] of batch.entries()) {
+            const cachedImage = sourceImages[batchIndex];
+            if (cachedImage === null || cachedImage === undefined) {
+                continue;
             }
 
-            const compressedTexture = await createCompressedTextureAsync(Texture, scene, sourceTexture, await encoded, sourceIndex, semantics);
-            for (const reference of references) {
-                reference.replace(compressedTexture);
+            const source = new Uint8Array(cachedImage.data);
+            if (cachedImage.mimeType === "image/ktx2" || isKtx2(source)) {
+                continue;
+            }
+
+            const encodesBySemantics = new Map<string, Promise<Uint8Array>>();
+            for (const { referencesBySemantics, texture: sourceTexture } of sourceGroup.entries) {
+                for (const [isNormalMap, references] of referencesBySemantics) {
+                    const semantics = getTextureEncodingSemantics(sourceTexture.gammaSpace, isNormalMap);
+                    const semanticsKey = `${semantics.isPerceptual}:${semantics.isNormalMap}`;
+                    let encoded = encodesBySemantics.get(semanticsKey);
+                    if (encoded === undefined) {
+                        encoded = encodeToKtx2Async(source, semantics);
+                        encodesBySemantics.set(semanticsKey, encoded);
+                    }
+
+                    const compressedTexture = await createCompressedTextureAsync(Texture, scene, sourceTexture, await encoded, sourceGroup.sourceKey, semantics);
+                    for (const reference of references) {
+                        reference.replace(compressedTexture);
+                    }
+                }
             }
         }
-        sourceTexture.dispose();
     }
 
     return scene;
@@ -349,9 +378,50 @@ function getTextureEncodingSemantics(gammaSpace: boolean, isNormalMap: boolean):
     };
 }
 
-function getSourceImageIdentity(texture: Texture, data: ArrayBuffer): object | string {
+function getSourceImageIdentity(texture: Texture): object | string {
     const internalTexture = texture.getInternalTexture();
-    return internalTexture?.url || internalTexture || data;
+    return internalTexture?.url || internalTexture || texture.url || texture;
+}
+
+async function getSourceImageAsync(textures: readonly Texture[], getCachedImageAsync: (texture: BaseTexture) => Promise<SourceImage | null>): Promise<SourceImage | null> {
+    for (const texture of textures) {
+        const cachedImage = await getCachedImageAsync(texture);
+        if (cachedImage !== null) {
+            return cachedImage;
+        }
+    }
+
+    for (const texture of textures) {
+        const sourceUrl = texture.url;
+        if (sourceUrl === null || sourceUrl.length === 0) {
+            continue;
+        }
+
+        const response = await fetch(sourceUrl);
+        if (!response.ok) {
+            throw new Error(`Failed to load texture "${sourceUrl}": HTTP ${response.status} ${response.statusText}`.trim());
+        }
+        const mimeType = await getSourceImageMimeTypeAsync(texture, sourceUrl, response);
+        if (mimeType !== undefined) {
+            return { data: await response.arrayBuffer(), mimeType };
+        }
+    }
+
+    return null;
+}
+
+async function getSourceImageMimeTypeAsync(texture: Texture, sourceUrl: string, response: Response): Promise<string | undefined> {
+    const responseMimeType = response.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
+    if (responseMimeType?.startsWith("image/")) {
+        return responseMimeType;
+    }
+    if (texture.mimeType?.startsWith("image/")) {
+        return texture.mimeType;
+    }
+
+    const { GetMimeType } = await import("@babylonjs/core/Misc/fileTools.js");
+    const inferredMimeType = GetMimeType(sourceUrl.split(/[?#]/, 1)[0] ?? sourceUrl);
+    return inferredMimeType?.startsWith("image/") ? inferredMimeType : undefined;
 }
 
 function isKtx2(source: Uint8Array): boolean {
@@ -407,7 +477,7 @@ async function createCompressedTextureAsync(
         const texture = new TextureConstructor(
             `node-assets-compressed-${sourceIndex}.${semanticName}.ktx2`,
             scene,
-            false,
+            source.noMipmap,
             source.invertY,
             source.samplingMode,
             () => resolve(texture),
@@ -420,6 +490,7 @@ async function createCompressedTextureAsync(
             undefined,
             ".ktx2"
         );
+        texture.delayLoad();
     });
 
     copyTextureProperties(source, compressed);
@@ -428,10 +499,13 @@ async function createCompressedTextureAsync(
 
 function copyTextureProperties(source: Texture, destination: Texture): void {
     destination.name = source.name ? (source.name.endsWith(".ktx2") ? source.name : `${source.name}.ktx2`) : "texture.ktx2";
+    destination.displayName = source.displayName;
     destination.metadata = source.metadata;
+    destination.animations = source.animations;
     destination.hasAlpha = source.hasAlpha;
     destination.getAlphaFromRGB = source.getAlphaFromRGB;
     destination.level = source.level;
+    destination.optimizeUVAllocation = source.optimizeUVAllocation;
     destination.coordinatesIndex = source.coordinatesIndex;
     destination.coordinatesMode = source.coordinatesMode;
     destination.wrapU = source.wrapU;
@@ -450,6 +524,14 @@ function copyTextureProperties(source: Texture, destination: Texture): void {
     destination.homogeneousRotationInUVTransform = source.homogeneousRotationInUVTransform;
     destination.anisotropicFilteringLevel = source.anisotropicFilteringLevel;
     destination.gammaSpace = source.gammaSpace;
+    destination.isBlocking = source.isBlocking;
+    destination.isRGBD = source.isRGBD;
+    destination.invertZ = source.invertZ;
+    destination.lodLevelInAlpha = source.lodLevelInAlpha;
+    destination.lodGenerationOffset = source.lodGenerationOffset;
+    destination.lodGenerationScale = source.lodGenerationScale;
+    destination.linearSpecularLOD = source.linearSpecularLOD;
+    destination.irradianceTexture = source.irradianceTexture;
 }
 
 const KTX2_MAGIC = new Uint8Array([0xab, 0x4b, 0x54, 0x58, 0x20, 0x32, 0x30, 0xbb, 0x0d, 0x0a, 0x1a, 0x0a]);

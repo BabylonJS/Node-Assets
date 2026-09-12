@@ -85,12 +85,12 @@ describe("FBX input", () => {
     it("compresses a loader-created StandardMaterial diffuse texture", async () => {
         const rootUrl = "https://example.com/model";
         const redirectedRootUrl = "https://cdn.example.com/assets/scene.fbx";
-        const textureUrl = "https://cdn.example.com/assets/textures/diffuse.png";
+        const textureUrl = "https://cdn.example.com/assets/textures/diffuse";
         vi.stubGlobal(
             "fetch",
             vi.fn((input: string | URL | Request) => {
                 if (String(input) === rootUrl) {
-                    const response = new Response(generateTexturedFbxDataWithUvs("textures/diffuse.png"));
+                    const response = new Response(generateTexturedFbxDataWithUvs("textures/diffuse"));
                     Object.defineProperty(response, "url", { value: redirectedRootUrl });
                     return Promise.resolve(response);
                 }
