@@ -64,19 +64,6 @@ export async function fetchOrThrowAsync(url: string, signal: AbortSignal): Promi
     return response;
 }
 
-export async function fetchAsDataUriAsync(url: string, signal: AbortSignal): Promise<string> {
-    if (!isHttpUrl(url)) {
-        return url;
-    }
-
-    return (await fetchAsDataUriWithUrlAsync(url, signal)).dataUri;
-}
-
-export async function fetchAsDataUriWithUrlAsync(url: string, signal: AbortSignal): Promise<{ readonly dataUri: string; readonly url: string }> {
-    const response = await fetchOrThrowAsync(url, signal);
-    return { dataUri: await responseToDataUriAsync(response), url: response.url || url };
-}
-
 export function createDataUri(data: Uint8Array, contentType: string): string {
     return `data:${contentType};base64,${toBase64(data)}`;
 }
@@ -94,7 +81,7 @@ export function toBase64(data: Uint8Array): string {
     return btoa(binary);
 }
 
-async function responseToDataUriAsync(response: Response): Promise<string> {
+export async function responseToDataUriAsync(response: Response): Promise<string> {
     const contentType = response.headers.get("content-type")?.split(";", 1)[0] || "application/octet-stream";
     const data = new Uint8Array(await response.arrayBuffer());
     return createDataUri(data, contentType);

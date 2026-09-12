@@ -2,7 +2,7 @@ import { Block, type BlockOptions } from "../block/block";
 import { defineBlock } from "../block/blockDefinition";
 import { BabylonSceneType, UrlType } from "../block/connectionPointType";
 import { NullEngineResource } from "../resources/nullEngineResource";
-import { fetchAsDataUriAsync, loadSingleFileSceneWithPluginAsync } from "../helpers/loadSceneWithPlugin";
+import { fetchOrThrowAsync, isHttpUrl, loadSingleFileSceneWithPluginAsync, responseToDataUriAsync } from "../helpers/loadSceneWithPlugin";
 
 const GltfInputBlockDefinition = /* @__PURE__ */ defineBlock({
     type: "input.gltf",
@@ -24,7 +24,13 @@ const GltfInputBlockDefinition = /* @__PURE__ */ defineBlock({
                     pluginExtension: format.extension,
                     pluginOptions: {
                         gltf: {
-                            preprocessUrlAsync: (dependencyUrl) => fetchAsDataUriAsync(dependencyUrl, signal),
+                            preprocessUrlAsync: async (dependencyUrl) => {
+                                if (!isHttpUrl(dependencyUrl)) {
+                                    return dependencyUrl;
+                                }
+
+                                return responseToDataUriAsync(await fetchOrThrowAsync(dependencyUrl, signal));
+                            },
                         },
                     },
                 };
