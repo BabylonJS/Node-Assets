@@ -1,5 +1,5 @@
-import type { _BlockRuntime, Block } from "../block/block";
-import type { _InputBlockDefinition } from "../block/blockDefinition";
+import type { _BlockRuntime, Block } from "../blocks/block";
+import type { _InputBlockDefinition } from "../blocks/blockDefinition";
 import type { ConnectionPointValue } from "../connectionPoints/connectionPoint";
 import type { NodeAsset } from "./nodeAsset";
 

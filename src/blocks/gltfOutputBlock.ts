@@ -1,11 +1,11 @@
 import type { BaseTexture } from "@babylonjs/core/Materials/Textures/baseTexture.js";
 import type { Scene as BabylonScene } from "@babylonjs/core/scene.js";
 
-import { Block, type BlockOptions, type InputPort } from "../block/block";
-import { defineBlock } from "../block/blockDefinition";
 import { BabylonSceneType } from "../connectionPoints/babylonScene";
 import { FileType } from "../connectionPoints/file";
 import { GltfMeshCompressionOptionsType, type GltfMeshCompressionOptions } from "../connectionPoints/gltfMeshCompressionOptions";
+import { Block, type BlockOptions, type InputPort } from "./block";
+import { defineBlock } from "./blockDefinition";
 
 const GltfOutputBlockDefinition = /* @__PURE__ */ defineBlock({
     type: "output.gltf",

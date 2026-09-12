@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { Block } from "../../src/block/block";
-import { defineBlock, value } from "../../src/block/blockDefinition";
+import { Block } from "../../src/blocks/block";
+import { defineBlock, value } from "../../src/blocks/blockDefinition";
 import { NodeAsset } from "../../src/nodeAsset/nodeAsset";
 import { ScaleDefinition, NumberDefinition, OtherNumberDefinition, NumberType } from "../helpers/numberBlocks";
 

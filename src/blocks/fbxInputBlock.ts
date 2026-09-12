@@ -1,8 +1,8 @@
-import { Block, type BlockOptions } from "../block/block";
-import { defineBlock } from "../block/blockDefinition";
 import { BabylonSceneType } from "../connectionPoints/babylonScene";
 import { UrlType } from "../connectionPoints/url";
 import { NullEngineResource } from "../resources/nullEngineResource";
+import { Block, type BlockOptions } from "./block";
+import { defineBlock } from "./blockDefinition";
 import { loadSingleFileSceneWithPluginAsync } from "../helpers/loadSceneWithPlugin";
 
 const FbxInputBlockDefinition = /* @__PURE__ */ defineBlock({
