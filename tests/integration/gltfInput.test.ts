@@ -43,6 +43,22 @@ describe("glTF input", () => {
         await Promise.all(outputs.map(parseGlbAsync));
     });
 
+    it("keeps a terminal scene usable until explicit cleanup", async () => {
+        const source = new GltfInputBlock({ input: generateGltfDataUri() });
+        const asset = new NodeAsset({ name: "terminal-gltf-scene", outputBlock: source });
+        const scene = await asset.executeAsync();
+
+        try {
+            expect(scene.isDisposed).toBe(false);
+            expect(scene.meshes.length).toBeGreaterThan(0);
+            scene.render();
+        } finally {
+            await asset.disposeSceneAsync(scene);
+        }
+
+        expect(scene.isDisposed).toBe(true);
+    });
+
     it.each([
         { contentType: "application/octet-stream", input: generateGltfDataUri(), url: "https://example.com/model.gltf" },
         { contentType: "application/octet-stream", input: generateGlbDataUri(), url: "https://example.com/model.glb" },

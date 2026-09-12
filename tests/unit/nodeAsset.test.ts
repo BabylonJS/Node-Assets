@@ -1,7 +1,12 @@
+import { NullEngine } from "@babylonjs/core/Engines/nullEngine.js";
+import { Scene } from "@babylonjs/core/scene.pure.js";
+
 import { describe, expect, expectTypeOf, it } from "vitest";
 
 import { Block } from "../../src/blocks/block";
 import { defineBlock, defineSourceBlock } from "../../src/blocks/blockDefinition";
+import { BabylonSceneType } from "../../src/connectionPoints/babylonScene";
+import { FileType } from "../../src/connectionPoints/file";
 import { NodeAsset, NodeAssetContext } from "../../src/index";
 import type { Resource } from "../../src/resources/resource";
 import { ScaleDefinition, NumberDefinition } from "../helpers/numberBlocks";
@@ -239,6 +244,208 @@ describe("NodeAsset", () => {
 
         expect(results.sort()).toEqual([1, 2]);
         expect(disposedIds.sort()).toEqual([1, 2]);
+    });
+
+    it("cleans file-output resources before resolving", async () => {
+        const events: string[] = [];
+        const resource = {
+            name: "file-output-resource",
+            create: () => {
+                events.push("create");
+                return {};
+            },
+            dispose: () => {
+                events.push("dispose");
+            },
+        } satisfies Resource<object>;
+        const definition = defineSourceBlock({
+            type: "file-output",
+            output: FileType,
+            resources: { resource },
+            run: () => {
+                events.push("run");
+                return new File(["result"], "result.txt");
+            },
+        });
+        const asset = new NodeAsset({ name: "file-output", outputBlock: new Block(definition) });
+
+        await expect(asset.executeAsync()).resolves.toBeInstanceOf(File);
+        expect(events).toEqual(["create", "run", "dispose"]);
+    });
+
+    it("retains all resources for an execution-owned terminal scene", async () => {
+        const events: string[] = [];
+        const engineResource = {
+            name: "owned-engine",
+            create: () => new NullEngine(),
+            dispose: (engine) => {
+                events.push("dispose engine");
+                engine.dispose();
+            },
+        } satisfies Resource<NullEngine>;
+        const retainedResource = {
+            name: "retained-resource",
+            create: () => ({}),
+            dispose: () => {
+                events.push("dispose retained resource");
+            },
+        } satisfies Resource<object>;
+        const definition = defineSourceBlock({
+            type: "owned-scene",
+            output: BabylonSceneType,
+            resources: { engine: engineResource, retainedResource },
+            run: (_config, { engine }) => new Scene(engine),
+        });
+        const asset = new NodeAsset({ name: "owned-scene", outputBlock: new Block(definition) });
+
+        const scene = await asset.executeAsync();
+        const siblingScene = new Scene(scene.getEngine());
+
+        expect(events).toEqual([]);
+        expect(scene.isDisposed).toBe(false);
+        expect(siblingScene.isDisposed).toBe(false);
+
+        await asset.disposeSceneAsync(scene);
+
+        expect(events).toEqual(["dispose retained resource", "dispose engine"]);
+        expect(scene.isDisposed).toBe(true);
+        expect(siblingScene.isDisposed).toBe(true);
+    });
+
+    it("leaves caller-owned scenes and engines untouched", async () => {
+        const events: string[] = [];
+        const unrelatedResource = {
+            name: "unrelated-resource",
+            create: () => ({}),
+            dispose: () => {
+                events.push("dispose unrelated resource");
+            },
+        } satisfies Resource<object>;
+        const definition = defineBlock({
+            type: "external-scene",
+            input: BabylonSceneType,
+            output: BabylonSceneType,
+            resources: { unrelatedResource },
+            run: (scene) => scene,
+        });
+        const engine = new NullEngine();
+        const scene = new Scene(engine);
+        const asset = new NodeAsset({ name: "external-scene", outputBlock: new Block(definition, { input: scene }) });
+
+        try {
+            await expect(asset.executeAsync()).resolves.toBe(scene);
+            expect(events).toEqual(["dispose unrelated resource"]);
+
+            await asset.disposeSceneAsync(scene);
+
+            expect(scene.isDisposed).toBe(false);
+            expect(engine.isDisposed).toBe(false);
+        } finally {
+            scene.dispose();
+            engine.dispose();
+        }
+    });
+
+    it("keeps concurrent scene executions independently owned", async () => {
+        let cleanupCount = 0;
+        const engineResource = {
+            name: "independent-engine",
+            create: () => new NullEngine(),
+            dispose: (engine) => {
+                cleanupCount++;
+                engine.dispose();
+            },
+        } satisfies Resource<NullEngine>;
+        const definition = defineSourceBlock({
+            type: "independent-scene",
+            output: BabylonSceneType,
+            resources: { engine: engineResource },
+            run: (_config, { engine }) => new Scene(engine),
+        });
+        const asset = new NodeAsset({ name: "independent-scenes", outputBlock: new Block(definition) });
+
+        const [firstScene, secondScene] = await Promise.all([asset.executeAsync(), asset.executeAsync()]);
+        await asset.disposeSceneAsync(firstScene);
+
+        expect(firstScene.isDisposed).toBe(true);
+        expect(secondScene.isDisposed).toBe(false);
+        expect(cleanupCount).toBe(1);
+
+        const firstCleanup = asset.disposeSceneAsync(secondScene);
+        const secondCleanup = asset.disposeSceneAsync(secondScene);
+
+        expect(firstCleanup).toBe(secondCleanup);
+        await Promise.all([firstCleanup, secondCleanup]);
+        expect(secondScene.isDisposed).toBe(true);
+        expect(cleanupCount).toBe(2);
+    });
+
+    it("caches aggregate terminal-scene cleanup failures", async () => {
+        const cleanupError = new Error("terminal cleanup failed");
+        const engineResource = {
+            name: "cleanup-failure-engine",
+            create: () => new NullEngine(),
+            dispose: (engine) => engine.dispose(),
+        } satisfies Resource<NullEngine>;
+        const failingResource = {
+            name: "failing-terminal-resource",
+            create: () => ({}),
+            dispose: () => {
+                throw cleanupError;
+            },
+        } satisfies Resource<object>;
+        const definition = defineSourceBlock({
+            type: "failing-cleanup-scene",
+            output: BabylonSceneType,
+            resources: { engine: engineResource, failingResource },
+            run: (_config, { engine }) => new Scene(engine),
+        });
+        const asset = new NodeAsset({ name: "failing-cleanup-scene", outputBlock: new Block(definition) });
+        const scene = await asset.executeAsync();
+
+        const firstCleanup = asset.disposeSceneAsync(scene);
+        const secondCleanup = asset.disposeSceneAsync(scene);
+        const error = await firstCleanup.catch((caught: unknown) => caught);
+
+        expect(firstCleanup).toBe(secondCleanup);
+        expect(error).toBeInstanceOf(AggregateError);
+        expect((error as AggregateError).errors).toEqual([cleanupError]);
+        expect(scene.isDisposed).toBe(true);
+        await expect(secondCleanup).rejects.toBe(error);
+        expect(asset.disposeSceneAsync(scene)).toBe(firstCleanup);
+    });
+
+    it("allows an in-flight owned scene to be cleaned after asset disposal", async () => {
+        let releaseEngine: (() => void) | undefined;
+        const engineReady = new Promise<void>((resolve) => {
+            releaseEngine = resolve;
+        });
+        const engineResource = {
+            name: "delayed-engine",
+            create: async () => {
+                await engineReady;
+                return new NullEngine();
+            },
+            dispose: (engine) => engine.dispose(),
+        } satisfies Resource<NullEngine>;
+        const definition = defineSourceBlock({
+            type: "delayed-scene",
+            output: BabylonSceneType,
+            resources: { engine: engineResource },
+            run: (_config, { engine }) => new Scene(engine),
+        });
+        const asset = new NodeAsset({ name: "delayed-scene", outputBlock: new Block(definition) });
+
+        const execution = asset.executeAsync();
+        asset.dispose();
+        await expect(asset.executeAsync()).rejects.toThrow();
+        releaseEngine?.();
+
+        const scene = await execution;
+        expect(scene.isDisposed).toBe(false);
+
+        await asset.disposeSceneAsync(scene);
+        expect(scene.isDisposed).toBe(true);
     });
 
     it("disposes acquired dependencies when resource creation fails", async () => {
