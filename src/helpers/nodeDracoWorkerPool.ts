@@ -14,6 +14,8 @@ export interface _ManagedNodeWorker extends Worker {
 }
 
 interface WorkerSlot {
+    action?: WorkerAction;
+    actionStarted: boolean;
     busy: boolean;
     idleTimer?: ReturnType<typeof setTimeout>;
     initialization?: Promise<_ManagedNodeWorker>;
@@ -85,8 +87,9 @@ export function _getNodeWorkerCount(availableParallelism: number): number {
 
 /** @internal */
 export class _NodeDracoWorkerPool extends WorkerPool {
-    private readonly _actions: WorkerAction[] = [];
+    private readonly _actions: Array<WorkerAction | undefined> = [];
     private readonly _slots: WorkerSlot[] = [];
+    private _actionHead = 0;
     private _disposed = false;
 
     public constructor(
@@ -111,14 +114,22 @@ export class _NodeDracoWorkerPool extends WorkerPool {
         }
         this._disposed = true;
         const error = new Error("The Node Draco worker pool was disposed.");
-        for (const action of this._actions.splice(0)) {
+        for (let action = this._takeNextAction(); action !== undefined; action = this._takeNextAction()) {
             this._runFailedAction(action, error);
         }
         for (const slot of [...this._slots]) {
             this._removeSlot(slot);
+            const action = slot.action;
+            delete slot.action;
+            if (action !== undefined) {
+                if (slot.actionStarted) {
+                    slot.worker?.dispatchFailure(error);
+                } else {
+                    this._runFailedAction(action, error);
+                }
+            }
             void slot.initialization?.then(
                 (worker) => {
-                    worker.dispatchFailure(error);
                     worker.terminate();
                 },
                 () => undefined
@@ -130,24 +141,26 @@ export class _NodeDracoWorkerPool extends WorkerPool {
         if (this._disposed) {
             return;
         }
-        while (this._actions.length > 0) {
+        while (this._hasQueuedActions()) {
             const idleSlot = this._slots.find((slot) => !slot.busy && !slot.removed);
-            if (idleSlot) {
-                this._runAction(idleSlot, this._actions.shift()!);
-                continue;
-            }
-            if (this._slots.length >= this._maxWorkers) {
+            if (idleSlot === undefined && this._slots.length >= this._maxWorkers) {
                 return;
             }
-            const action = this._actions.shift()!;
-            const slot = this._createSlot();
-            this._slots.push(slot);
+            const action = this._takeNextAction();
+            if (action === undefined) {
+                return;
+            }
+            const slot = idleSlot ?? this._createSlot();
+            if (idleSlot === undefined) {
+                this._slots.push(slot);
+            }
             this._runAction(slot, action);
         }
     }
 
     private _createSlot(): WorkerSlot {
         const slot: WorkerSlot = {
+            actionStarted: false,
             busy: false,
             removed: false,
         };
@@ -159,6 +172,8 @@ export class _NodeDracoWorkerPool extends WorkerPool {
     }
 
     private _runAction(slot: WorkerSlot, action: WorkerAction): void {
+        slot.action = action;
+        slot.actionStarted = false;
         slot.busy = true;
         if (slot.idleTimer !== undefined) {
             clearTimeout(slot.idleTimer);
@@ -173,18 +188,26 @@ export class _NodeDracoWorkerPool extends WorkerPool {
             (worker) => {
                 if (this._disposed || slot.removed) {
                     worker.terminate();
-                    if (!this._disposed) {
-                        this._runFailedAction(action, new Error("The Node Draco worker stopped during initialization."));
+                    if (slot.action === action) {
+                        delete slot.action;
+                        this._runFailedAction(
+                            action,
+                            this._disposed ? new Error("The Node Draco worker pool was disposed.") : new Error("The Node Draco worker stopped during initialization.")
+                        );
                     }
                     return;
                 }
                 worker.ref();
+                slot.actionStarted = true;
                 let completed = false;
                 const onComplete = () => {
                     if (completed) {
                         return;
                     }
                     completed = true;
+                    if (slot.action === action) {
+                        delete slot.action;
+                    }
                     this._completeAction(slot);
                 };
                 try {
@@ -196,8 +219,11 @@ export class _NodeDracoWorkerPool extends WorkerPool {
             },
             (error) => {
                 this._removeSlot(slot);
-                this._runFailedAction(action, error);
-                this._dispatch();
+                if (slot.action === action) {
+                    delete slot.action;
+                    this._runFailedAction(action, error);
+                }
+                this._failQueuedActions(error);
             }
         );
     }
@@ -208,6 +234,7 @@ export class _NodeDracoWorkerPool extends WorkerPool {
             return;
         }
         slot.busy = false;
+        slot.actionStarted = false;
         const worker = slot.worker;
         if (worker?.dead) {
             this._removeSlot(slot);
@@ -258,6 +285,33 @@ export class _NodeDracoWorkerPool extends WorkerPool {
             worker.dispatchFailure(error);
         }
     }
+
+    private _failQueuedActions(error: unknown): void {
+        for (let action = this._takeNextAction(); action !== undefined; action = this._takeNextAction()) {
+            this._runFailedAction(action, error);
+        }
+    }
+
+    private _takeNextAction(): WorkerAction | undefined {
+        if (this._actionHead >= this._actions.length) {
+            this._actions.length = 0;
+            this._actionHead = 0;
+            return undefined;
+        }
+        const action = this._actions[this._actionHead];
+        this._actions[this._actionHead] = undefined;
+        this._actionHead++;
+        return action;
+    }
+
+    private _hasQueuedActions(): boolean {
+        if (this._actionHead < this._actions.length) {
+            return true;
+        }
+        this._actions.length = 0;
+        this._actionHead = 0;
+        return false;
+    }
 }
 
 class NodeWorkerAdapter extends EventTarget implements _ManagedNodeWorker {
@@ -281,12 +335,12 @@ class NodeWorkerAdapter extends EventTarget implements _ManagedNodeWorker {
             const event = new MessageEvent("messageerror", { data: error });
             this.dispatchEvent(event);
             this.onmessageerror?.call(this, event);
-            this._handleFatalError(error);
+            this._handleFatalError(error, true);
         });
-        _worker.once("error", (error) => this._handleFatalError(error));
+        _worker.once("error", (error) => this._handleFatalError(error, true));
         _worker.once("exit", (code) => {
             if (!this._terminating && !this.dead) {
-                this._handleFatalError(new Error(`The Node Draco worker exited unexpectedly with code ${code}.`));
+                this._handleFatalError(new Error(`The Node Draco worker exited unexpectedly with code ${code}.`), false);
             }
         });
     }
@@ -313,7 +367,7 @@ class NodeWorkerAdapter extends EventTarget implements _ManagedNodeWorker {
     }
 
     public terminate(): void {
-        if (this.dead) {
+        if (this._terminating) {
             return;
         }
         this._terminating = true;
@@ -335,11 +389,15 @@ class NodeWorkerAdapter extends EventTarget implements _ManagedNodeWorker {
         this.onerror?.call(this, event);
     }
 
-    private _handleFatalError(error: unknown): void {
+    private _handleFatalError(error: unknown, terminateWorker: boolean): void {
         if (this.dead) {
             return;
         }
         this.dead = true;
+        if (terminateWorker && !this._terminating) {
+            this._terminating = true;
+            void this._worker.terminate();
+        }
         this.dispatchFailure(error);
         this._onFatalError(error);
     }

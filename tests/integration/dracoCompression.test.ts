@@ -4,7 +4,7 @@ import { Mesh } from "@babylonjs/core/Meshes/mesh.js";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData.js";
 import { Scene } from "@babylonjs/core/scene.js";
 
-import { describe, expect, expectTypeOf, it } from "vitest";
+import { describe, expect, expectTypeOf, it, vi } from "vitest";
 
 import { DracoEncoderBlock, GltfInputBlock, GltfOutputBlock, NodeAsset, type GltfMeshCompressionOptions } from "../../src/index";
 import { parseGlbAsync } from "../helpers/glb";
@@ -38,6 +38,7 @@ describe("Draco compression", () => {
         vertexData.normals = [0, 0, 1, 0, 0, 1, 0, 0, 1];
         vertexData.indices = [0, 1, 2];
         vertexData.applyToMesh(mesh);
+        vi.stubGlobal("window", {});
 
         try {
             await new NodeAsset({ name: "node-draco-encoder", outputBlock: new DracoEncoderBlock() }).executeAsync();
@@ -50,6 +51,7 @@ describe("Draco compression", () => {
 
             expect(firstResult).toBe("event-loop");
         } finally {
+            vi.unstubAllGlobals();
             scene.dispose();
             engine.dispose();
         }
