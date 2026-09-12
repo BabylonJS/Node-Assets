@@ -3,7 +3,9 @@ import type { Scene as BabylonScene } from "@babylonjs/core/scene.js";
 
 import { Block, type BlockOptions, type InputPort } from "../block/block";
 import { defineBlock } from "../block/blockDefinition";
-import { BabylonSceneType, FileType, GltfMeshCompressionOptionsType, type GltfMeshCompressionOptions } from "../block/connectionPointType";
+import { BabylonSceneType } from "../connectionPoints/babylonScene";
+import { FileType } from "../connectionPoints/file";
+import { GltfMeshCompressionOptionsType, type GltfMeshCompressionOptions } from "../connectionPoints/gltfMeshCompressionOptions";
 
 const GltfOutputBlockDefinition = /* @__PURE__ */ defineBlock({
     type: "output.gltf",

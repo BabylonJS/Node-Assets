@@ -1,5 +1,5 @@
 import type { _BlockRuntime } from "../block/block";
-import type { ConnectionPointValue } from "../block/connectionPointType";
+import type { ConnectionPointValue } from "../connectionPoints/connectionPoint";
 import type { NodeAssetContext } from "./nodeAssetContext";
 import { ResourceScope } from "../resources/resourceScope";
 

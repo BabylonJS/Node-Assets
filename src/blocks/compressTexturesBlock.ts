@@ -6,7 +6,7 @@ import type sharpFactory from "sharp";
 
 import { Block } from "../block/block";
 import { defineBlock } from "../block/blockDefinition";
-import { BabylonSceneType } from "../block/connectionPointType";
+import { BabylonSceneType } from "../connectionPoints/babylonScene";
 
 type CompressTexturesBlockDefinition = ReturnType<typeof createCompressTexturesBlockDefinition>;
 

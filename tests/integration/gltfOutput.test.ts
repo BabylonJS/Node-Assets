@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { Block } from "../../src/block/block";
 import { defineBlock } from "../../src/block/blockDefinition";
-import { BabylonSceneType } from "../../src/block/connectionPointType";
+import { BabylonSceneType } from "../../src/connectionPoints/babylonScene";
 import { GltfInputBlock, GltfOutputBlock, NodeAsset } from "../../src/index";
 import { parseGlbAsync } from "../helpers/glb";
 import { generateGltfDataUri, generateTexturedGltfDataUri } from "../helpers/gltf";

@@ -3,7 +3,8 @@ import type { Scene as BabylonScene } from "@babylonjs/core/scene.js";
 
 import { Block, type BlockOptions } from "../block/block";
 import { defineBlock } from "../block/blockDefinition";
-import { BabylonSceneType, UrlType } from "../block/connectionPointType";
+import { BabylonSceneType } from "../connectionPoints/babylonScene";
+import { UrlType } from "../connectionPoints/url";
 import { createDataUri, fetchOrThrowAsync, loadSingleFileSceneWithPluginAsync } from "../helpers/loadSceneWithPlugin";
 import { NullEngineResource } from "../resources/nullEngineResource";
 

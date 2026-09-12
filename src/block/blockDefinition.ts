@@ -1,4 +1,4 @@
-import type { ConnectionPointType, ConnectionPointValue } from "./connectionPointType";
+import type { ConnectionPointType, ConnectionPointValue } from "../connectionPoints/connectionPoint";
 import type { ResourceDependencies, ResourceValues } from "../resources/resource";
 
 declare const configType: unique symbol;

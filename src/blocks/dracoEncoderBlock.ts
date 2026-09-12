@@ -2,7 +2,7 @@ import type { IDracoCodecConfiguration } from "@babylonjs/core/Meshes/Compressio
 
 import { Block, type BlockOptions } from "../block/block";
 import { defineSourceBlock } from "../block/blockDefinition";
-import { createGltfMeshCompressionOptions, GltfMeshCompressionOptionsType, type GltfMeshCompressionOptions } from "../block/connectionPointType";
+import { createGltfMeshCompressionOptions, GltfMeshCompressionOptionsType, type GltfMeshCompressionOptions } from "../connectionPoints/gltfMeshCompressionOptions";
 
 const DracoEncoderBlockDefinition = /* @__PURE__ */ defineSourceBlock({
     type: "input.draco-encoder",
