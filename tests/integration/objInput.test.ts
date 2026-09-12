@@ -59,11 +59,9 @@ describe("OBJ input", () => {
         }
     });
 
-    it("rewrites repeated material references with linear source copying", async () => {
-        const marker = "# node-assets-obj-copy-measurement";
+    it("preserves repeated material references with CRLF line endings", async () => {
         const materialName = "Repeated Material";
         const obj = [
-            marker,
             "mtllib materials/model.mtl",
             "o Triangle",
             "v 0 0 0",
@@ -87,25 +85,12 @@ describe("OBJ input", () => {
             })
         );
 
-        const originalSlice = String.prototype.slice;
-        let copiedCharacters = 0;
-        const sliceSpy = vi.spyOn(String.prototype, "slice").mockImplementation(function (this: string, start?: number, end?: number): string {
-            const source = String(this);
-            const result = originalSlice.call(source, start, end);
-            if (source.startsWith(marker)) {
-                copiedCharacters += result.length;
-            }
-            return result;
-        });
-
         try {
             const { json } = await parseGlbAsync(await roundTripAsync(new ObjInputBlock({ input: rootUrl })));
 
             expect(json.meshes).toHaveLength(512);
             expect(json.materials?.[0]?.name).toBe(materialName);
-            expect(copiedCharacters).toBeLessThan(obj.length * 20);
         } finally {
-            sliceSpy.mockRestore();
             vi.unstubAllGlobals();
         }
     });

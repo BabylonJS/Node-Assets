@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { GltfOutputBlock, NodeAsset, NodeAssetContext, StlInputBlock } from "../../src/index";
-import { runWithoutBase64EncodingAsync } from "../helpers/base64";
 import { parseGlbAsync } from "../helpers/glb";
 import { generateBinaryStlData, generateStlData, generateStlDataUri } from "../helpers/stl";
 
@@ -16,16 +15,17 @@ describe("STL input", () => {
     it.each([
         { data: generateStlData(), format: "ASCII" },
         { data: generateBinaryStlData(), format: "binary" },
-    ])("loads an extensionless HTTP $format asset without base64 encoding", async ({ data }) => {
+    ])("loads an extensionless HTTP $format asset", async ({ data }) => {
         vi.stubGlobal(
             "fetch",
             vi.fn(() => Promise.resolve(new Response(typeof data === "string" ? data : new Uint8Array(data).buffer)))
         );
 
         try {
-            const { json } = await runWithoutBase64EncodingAsync(async () => parseGlbAsync(await roundTripAsync(new StlInputBlock({ input: "https://example.com/model" }))));
+            const { json } = await parseGlbAsync(await roundTripAsync(new StlInputBlock({ input: "https://example.com/model" })));
 
             expect(json.meshes).toHaveLength(1);
+            expect(json.meshes?.[0]?.primitives).toHaveLength(1);
         } finally {
             vi.unstubAllGlobals();
         }

@@ -3,6 +3,36 @@ export function generateFbxDataUri(): string {
 }
 
 export function generateFbxData(): string {
+    return generateAsciiFbxData();
+}
+
+export function generateTexturedFbxData(texturePath: string): string {
+    return generateAsciiFbxData(texturePath);
+}
+
+function generateAsciiFbxData(texturePath?: string): string {
+    const materialObjects =
+        texturePath === undefined
+            ? ""
+            : `
+    Material: 3, "Material::Textured", "" {
+        ShadingModel: "Lambert"
+        Properties70:  {
+            P: "DiffuseColor", "Color", "", "A",1,1,1
+        }
+    }
+    Texture: 4, "Texture::Diffuse", "TextureVideoClip" {
+        Type: "TextureVideoClip"
+        FileName: "${texturePath}"
+        RelativeFilename: "${texturePath}"
+    }`;
+    const materialConnections =
+        texturePath === undefined
+            ? ""
+            : `
+    C: "OO", 3, 2
+    C: "OP", 4, 3, "DiffuseColor"`;
+
     return `; FBX 7.4.0 project file
 GlobalSettings:  {
     Version: 1000
@@ -32,10 +62,11 @@ Objects:  {
         }
     }
     Model: 2, "Model::Triangle", "Mesh" {
-    }
+    }${materialObjects}
 }
 Connections:  {
     C: "OO", 1, 2
+${materialConnections}
     C: "OO", 2, 0
 }`;
 }

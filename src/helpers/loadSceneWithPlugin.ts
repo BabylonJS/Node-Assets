@@ -52,7 +52,8 @@ export async function loadSingleFileSceneWithPluginAsync(
         const rootUrl = new URL(".", resolvedUrl).href;
         const name = new URL(resolvedUrl).pathname.split("/").pop() ?? "";
         if (options.prepareSceneLoadAsync === undefined && options.createDirectPluginAsync !== undefined) {
-            return await loadFetchedSceneWithPluginAsync(await response.arrayBuffer(), engine, rootUrl, name, options.createDirectPluginAsync);
+            const [data, plugin] = await Promise.all([response.arrayBuffer(), options.createDirectPluginAsync()]);
+            return await loadFetchedSceneWithPluginAsync(data, engine, rootUrl, name, plugin);
         }
         const preparation =
             options.prepareSceneLoadAsync === undefined
@@ -78,14 +79,8 @@ export async function loadSingleFileSceneWithPluginAsync(
     }
 }
 
-async function loadFetchedSceneWithPluginAsync(
-    data: ArrayBuffer,
-    engine: AbstractEngine,
-    rootUrl: string,
-    name: string,
-    createPluginAsync: CreateDirectSceneLoaderPluginAsync
-): Promise<Scene> {
-    const [{ Scene }, plugin] = await Promise.all([import("@babylonjs/core/scene.js"), createPluginAsync()]);
+async function loadFetchedSceneWithPluginAsync(data: ArrayBuffer, engine: AbstractEngine, rootUrl: string, name: string, plugin: DirectSceneLoaderPlugin): Promise<Scene> {
+    const { Scene } = await import("@babylonjs/core/scene.pure.js");
     const scene = new Scene(engine);
 
     try {
