@@ -1,6 +1,7 @@
 import type { BaseTexture } from "@babylonjs/core/Materials/Textures/baseTexture.js";
 import type { Texture } from "@babylonjs/core/Materials/Textures/texture.js";
 import type { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial.js";
+import type { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial.js";
 import type { Scene as BabylonScene } from "@babylonjs/core/scene.js";
 import type sharpFactory from "sharp";
 
@@ -12,7 +13,7 @@ type CompressTexturesBlockDefinition = ReturnType<typeof createCompressTexturesB
 
 let compressTexturesBlockDefinition: CompressTexturesBlockDefinition | undefined;
 
-/** Compresses supported glTF-loaded PBR textures to KTX2. */
+/** Compresses supported 2D image textures used by built-in PBR and standard materials to KTX2. */
 export class CompressTexturesBlock extends Block<CompressTexturesBlockDefinition> {
     public constructor() {
         super((compressTexturesBlockDefinition ??= createCompressTexturesBlockDefinition()));
@@ -41,9 +42,11 @@ function createCompressTexturesBlockDefinition() {
 }
 
 async function compressTexturesAsync(scene: BabylonScene): Promise<BabylonScene> {
-    const [{ PBRMaterial }, { Texture }, { GetCachedImageAsync }, { RegisterKHR_texture_basisu }] = await Promise.all([
+    const [{ PBRMaterial }, { StandardMaterial }, { Texture }, { GetMimeType }, { GetCachedImageAsync }, { RegisterKHR_texture_basisu }] = await Promise.all([
         import("@babylonjs/core/Materials/PBR/pbrMaterial.js"),
+        import("@babylonjs/core/Materials/standardMaterial.js"),
         import("@babylonjs/core/Materials/Textures/texture.js"),
+        import("@babylonjs/core/Misc/fileTools.js"),
         import("@babylonjs/serializers/exportImageUtils.js"),
         import("@babylonjs/serializers/glTF/2.0/Extensions/KHR_texture_basisu.pure.js"),
     ]);
@@ -52,11 +55,13 @@ async function compressTexturesAsync(scene: BabylonScene): Promise<BabylonScene>
 
     const referencesByTexture = new Map<Texture, Map<boolean, TextureReference[]>>();
     for (const material of scene.materials) {
-        if (!(material instanceof PBRMaterial)) {
+        const references =
+            material instanceof PBRMaterial ? getPbrTextureReferences(material) : material instanceof StandardMaterial ? getStandardTextureReferences(material) : undefined;
+        if (references === undefined) {
             continue;
         }
-        for (const reference of getTextureReferences(material)) {
-            if (!(reference.texture instanceof Texture) || reference.texture.getClassName() !== "Texture") {
+        for (const reference of references) {
+            if (!(reference.texture instanceof Texture) || reference.texture.constructor !== Texture) {
                 continue;
             }
             const referencesBySemantics = referencesByTexture.get(reference.texture) ?? new Map<boolean, TextureReference[]>();
@@ -68,10 +73,20 @@ async function compressTexturesAsync(scene: BabylonScene): Promise<BabylonScene>
     }
 
     const encodedBySource = new Map<object | string, Map<string, Promise<Uint8Array>>>();
+    const sourceIndexByIdentity = new Map<object | string, number>();
     for (const [sourceTexture, referencesBySemantics] of referencesByTexture) {
-        const cachedImage = await GetCachedImageAsync(sourceTexture);
+        let cachedImage = await GetCachedImageAsync(sourceTexture);
+        const sourceUrl = sourceTexture.url;
+        const sourceMimeType = sourceTexture.mimeType ?? (sourceUrl === null ? undefined : GetMimeType(sourceUrl)) ?? "";
+        if (cachedImage === null && sourceUrl !== null && sourceUrl.length > 0 && sourceMimeType.startsWith("image/")) {
+            const response = await fetch(sourceUrl);
+            if (!response.ok) {
+                throw new Error(`Failed to load texture "${sourceUrl}": HTTP ${response.status} ${response.statusText}`.trim());
+            }
+            cachedImage = { data: await response.arrayBuffer(), mimeType: sourceMimeType };
+        }
         if (cachedImage === null) {
-            throw new Error(`Texture "${sourceTexture.name}" does not have cached source image bytes.`);
+            continue;
         }
 
         const source = new Uint8Array(cachedImage.data);
@@ -80,6 +95,11 @@ async function compressTexturesAsync(scene: BabylonScene): Promise<BabylonScene>
         }
 
         const sourceIdentity = getSourceImageIdentity(sourceTexture, cachedImage.data);
+        let sourceIndex = sourceIndexByIdentity.get(sourceIdentity);
+        if (sourceIndex === undefined) {
+            sourceIndex = sourceIndexByIdentity.size;
+            sourceIndexByIdentity.set(sourceIdentity, sourceIndex);
+        }
         for (const [isNormalMap, references] of referencesBySemantics) {
             const semantics = getTextureEncodingSemantics(sourceTexture.gammaSpace, isNormalMap);
             const semanticsKey = `${semantics.isPerceptual}:${semantics.isNormalMap}`;
@@ -94,7 +114,7 @@ async function compressTexturesAsync(scene: BabylonScene): Promise<BabylonScene>
                 encodesBySemantics.set(semanticsKey, encoded);
             }
 
-            const compressedTexture = await createCompressedTextureAsync(Texture, scene, sourceTexture, await encoded);
+            const compressedTexture = await createCompressedTextureAsync(Texture, scene, sourceTexture, await encoded, sourceIndex, semantics);
             for (const reference of references) {
                 reference.replace(compressedTexture);
             }
@@ -105,7 +125,7 @@ async function compressTexturesAsync(scene: BabylonScene): Promise<BabylonScene>
     return scene;
 }
 
-function getTextureReferences(material: PBRMaterial): TextureReference[] {
+function getPbrTextureReferences(material: PBRMaterial): TextureReference[] {
     const references: TextureReference[] = [];
     addReference(
         references,
@@ -262,6 +282,57 @@ function getTextureReferences(material: PBRMaterial): TextureReference[] {
     return references;
 }
 
+function getStandardTextureReferences(material: StandardMaterial): TextureReference[] {
+    const references: TextureReference[] = [];
+    addReference(
+        references,
+        () => material.diffuseTexture,
+        (texture) => (material.diffuseTexture = texture)
+    );
+    addReference(
+        references,
+        () => material.ambientTexture,
+        (texture) => (material.ambientTexture = texture)
+    );
+    addReference(
+        references,
+        () => material.opacityTexture,
+        (texture) => (material.opacityTexture = texture)
+    );
+    addReference(
+        references,
+        () => material.reflectionTexture,
+        (texture) => (material.reflectionTexture = texture)
+    );
+    addReference(
+        references,
+        () => material.emissiveTexture,
+        (texture) => (material.emissiveTexture = texture)
+    );
+    addReference(
+        references,
+        () => material.specularTexture,
+        (texture) => (material.specularTexture = texture)
+    );
+    addReference(
+        references,
+        () => material.bumpTexture,
+        (texture) => (material.bumpTexture = texture),
+        true
+    );
+    addReference(
+        references,
+        () => material.lightmapTexture,
+        (texture) => (material.lightmapTexture = texture)
+    );
+    addReference(
+        references,
+        () => material.refractionTexture,
+        (texture) => (material.refractionTexture = texture)
+    );
+    return references;
+}
+
 function addReference(references: TextureReference[], get: () => BaseTexture | null, replace: (texture: BaseTexture) => void, isNormalMap = false): void {
     const texture = get();
     if (texture !== null) {
@@ -323,10 +394,18 @@ function isNodeRuntime(): boolean {
     return typeof process !== "undefined" && process.versions?.node !== undefined;
 }
 
-async function createCompressedTextureAsync(TextureConstructor: typeof Texture, scene: BabylonScene, source: Texture, encoded: Uint8Array): Promise<Texture> {
+async function createCompressedTextureAsync(
+    TextureConstructor: typeof Texture,
+    scene: BabylonScene,
+    source: Texture,
+    encoded: Uint8Array,
+    sourceIndex: number,
+    semantics: TextureEncodingSemantics
+): Promise<Texture> {
+    const semanticName = semantics.isNormalMap ? "normal" : semantics.isPerceptual ? "srgb" : "linear";
     const compressed = await new Promise<Texture>((resolve, reject) => {
         const texture = new TextureConstructor(
-            `${source.name || "texture"}.ktx2`,
+            `node-assets-compressed-${sourceIndex}.${semanticName}.ktx2`,
             scene,
             false,
             source.invertY,
@@ -349,6 +428,7 @@ async function createCompressedTextureAsync(TextureConstructor: typeof Texture, 
 
 function copyTextureProperties(source: Texture, destination: Texture): void {
     destination.name = source.name ? (source.name.endsWith(".ktx2") ? source.name : `${source.name}.ktx2`) : "texture.ktx2";
+    destination.metadata = source.metadata;
     destination.hasAlpha = source.hasAlpha;
     destination.getAlphaFromRGB = source.getAlphaFromRGB;
     destination.level = source.level;

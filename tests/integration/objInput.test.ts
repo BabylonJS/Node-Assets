@@ -111,6 +111,8 @@ describe("OBJ input", () => {
                         material.diffuseTexture.uScale = 0.75;
                         material.diffuseTexture.vScale = 0.625;
                         material.diffuseTexture.wAng = 0.125;
+                        material.diffuseTexture.uRotationCenter = 0;
+                        material.diffuseTexture.vRotationCenter = 0;
                         material.diffuseTexture.coordinatesIndex = 1;
                         material.diffuseTexture.updateSamplingMode(Texture.NEAREST_SAMPLINGMODE);
                         material.ambientTexture = material.diffuseTexture;
@@ -136,7 +138,7 @@ describe("OBJ input", () => {
                     output: BabylonSceneType,
                     run: (scene) => {
                         const material = scene.materials[0];
-                        const preservedMaterial = scene.materials[1];
+                        const preservedMaterial = scene.getMaterialByName("non-image-texture");
                         if (!(material instanceof StandardMaterial) || !(material.diffuseTexture instanceof Texture) || !(material.bumpTexture instanceof Texture)) {
                             throw new Error("Expected compressed StandardMaterial textures.");
                         }
@@ -185,6 +187,8 @@ describe("OBJ input", () => {
             const material = parsed.json.materials?.[0];
             const baseColorTexture = material?.pbrMetallicRoughness?.baseColorTexture;
             const baseColorImageIndex = getTextureImageIndex(parsed, baseColorTexture?.index);
+            const emissiveImageIndex = getTextureImageIndex(parsed, material?.emissiveTexture?.index);
+            const occlusionImageIndex = getTextureImageIndex(parsed, material?.occlusionTexture?.index);
             const normalImageIndex = getTextureImageIndex(parsed, material?.normalTexture?.index);
 
             expect(parsed.json.extensionsUsed).toContain("KHR_texture_basisu");
@@ -194,8 +198,8 @@ describe("OBJ input", () => {
             expect(parsed.json.images?.[baseColorImageIndex ?? -1]?.mimeType).toBe("image/ktx2");
             expect(parsed.json.images?.[normalImageIndex ?? -1]?.mimeType).toBe("image/ktx2");
             expect(normalImageIndex).not.toBe(baseColorImageIndex);
-            expect(material?.emissiveTexture?.index).toBe(baseColorTexture?.index);
-            expect(material?.occlusionTexture?.index).toBe(baseColorTexture?.index);
+            expect(emissiveImageIndex).toBe(baseColorImageIndex);
+            expect(occlusionImageIndex).toBe(baseColorImageIndex);
             expect(material?.normalTexture?.scale).toBe(0.5);
             expect(baseColorTexture?.extensions?.KHR_texture_transform).toEqual({
                 offset: [0.25, 0.5],
