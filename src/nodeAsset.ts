@@ -1,4 +1,7 @@
+import type { Scene as BabylonScene } from "@babylonjs/core/scene.js";
+
 import type { _BlockRuntime } from "./blocks/block";
+import { BabylonSceneType } from "./connectionPoints/babylonScene";
 import type { ConnectionPointValue } from "./connectionPoints/connectionPoint";
 import type { NodeAssetContext } from "./nodeAssetContext";
 import { ResourceScope } from "./resources/resourceScope";
@@ -28,11 +31,17 @@ interface NodeRecord {
     readonly auxiliarySources: Readonly<Record<string, AnyBlock | undefined>>;
 }
 
+interface ExecutionResult<TResult> {
+    readonly result: TResult;
+    readonly retainedScope: ResourceScope | undefined;
+}
+
 /** An executable asset pipeline, captured from a terminal output block. */
 export class NodeAsset<TOutput extends AnyBlock> {
     readonly #blocks: ReadonlySet<AnyBlock>;
     readonly #consumerCounts: ReadonlyMap<AnyBlock, number>;
     readonly #nodes: readonly NodeRecord[];
+    readonly #ownedSceneScopes = new WeakMap<BabylonScene, ResourceScope>();
     #isDisposed = false;
 
     public readonly name: string;
@@ -52,7 +61,17 @@ export class NodeAsset<TOutput extends AnyBlock> {
             return Promise.reject(new Error(`NodeAsset "${this.name}" is disposed.`));
         }
         const inputs = context?._snapshot() ?? new Map<AnyBlock, unknown>();
-        return executeAsync(this.#nodes, this.#consumerCounts, this.outputBlock, inputs);
+        return executeAsync(this.#nodes, this.#consumerCounts, this.outputBlock, inputs).then(({ result, retainedScope }) => {
+            if (retainedScope !== undefined && BabylonSceneType.is(result)) {
+                this.#ownedSceneScopes.set(result, retainedScope);
+            }
+            return result;
+        });
+    }
+
+    /** Releases resources retained for a terminal scene returned by this node asset. */
+    public disposeSceneAsync(scene: BabylonScene): Promise<void> {
+        return this.#ownedSceneScopes.get(scene)?.disposeAsync() ?? Promise.resolve();
     }
 
     /** Disposes this node asset without modifying its blocks. */
@@ -118,12 +137,13 @@ async function executeAsync<TOutput extends AnyBlock>(
     consumerCounts: ReadonlyMap<AnyBlock, number>,
     outputBlock: TOutput,
     contextInputs: ReadonlyMap<AnyBlock, unknown>
-): Promise<ConnectionPointValue<TOutput["_definition"]["output"]>> {
+): Promise<ExecutionResult<ConnectionPointValue<TOutput["_definition"]["output"]>>> {
     const resourceScope = new ResourceScope();
     const remainingConsumers = new Map(consumerCounts);
     const values = new Map<AnyBlock, unknown>();
 
     let result: ConnectionPointValue<TOutput["_definition"]["output"]> | undefined;
+    let retainedScope: ResourceScope | undefined;
     let executionError: unknown;
     let executionFailed = false;
     try {
@@ -176,6 +196,9 @@ async function executeAsync<TOutput extends AnyBlock>(
         }
 
         result = values.get(outputBlock) as ConnectionPointValue<TOutput["_definition"]["output"]>;
+        if (BabylonSceneType.is(result) && resourceScope.hasAcquiredValue(result.getEngine())) {
+            retainedScope = resourceScope;
+        }
     } catch (error) {
         executionError = error;
         executionFailed = true;
@@ -184,11 +207,13 @@ async function executeAsync<TOutput extends AnyBlock>(
     values.clear();
     let disposalError: unknown;
     let disposalFailed = false;
-    try {
-        await resourceScope.disposeAsync();
-    } catch (error) {
-        disposalError = error;
-        disposalFailed = true;
+    if (retainedScope === undefined) {
+        try {
+            await resourceScope.disposeAsync();
+        } catch (error) {
+            disposalError = error;
+            disposalFailed = true;
+        }
     }
 
     if (executionFailed && disposalFailed) {
@@ -201,7 +226,10 @@ async function executeAsync<TOutput extends AnyBlock>(
     if (disposalFailed) {
         throw disposalError;
     }
-    return result as ConnectionPointValue<TOutput["_definition"]["output"]>;
+    return {
+        result: result as ConnectionPointValue<TOutput["_definition"]["output"]>,
+        retainedScope,
+    };
 }
 
 function releaseConsumedValue(source: AnyBlock, remainingConsumers: Map<AnyBlock, number>, values: Map<AnyBlock, unknown>): void {

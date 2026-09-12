@@ -1,3 +1,6 @@
+import { FreeCamera } from "@babylonjs/core/Cameras/freeCamera.js";
+import { Vector3 } from "@babylonjs/core/Maths/math.vector.js";
+
 import { describe, expect, it, vi } from "vitest";
 
 import { GltfInputBlock, GltfOutputBlock, NodeAsset, NodeAssetContext } from "../../src/index";
@@ -51,6 +54,7 @@ describe("glTF input", () => {
         try {
             expect(scene.isDisposed).toBe(false);
             expect(scene.meshes.length).toBeGreaterThan(0);
+            scene.activeCamera = new FreeCamera("test-camera", Vector3.Zero(), scene);
             scene.render();
         } finally {
             await asset.disposeSceneAsync(scene);
