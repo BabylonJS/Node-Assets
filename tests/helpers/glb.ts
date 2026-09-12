@@ -8,24 +8,31 @@ export interface GlbJson {
     readonly extensionsUsed?: readonly string[];
     readonly images?: ReadonlyArray<{ readonly bufferView?: number; readonly mimeType?: string; readonly name?: string }>;
     readonly materials?: ReadonlyArray<{
+        readonly emissiveTexture?: GlbTextureInfo;
         readonly extensions?: Readonly<Record<string, unknown>>;
         readonly name?: string;
-        readonly normalTexture?: {
-            readonly index?: number;
-        };
+        readonly normalTexture?: GlbTextureInfo & { readonly scale?: number };
+        readonly occlusionTexture?: GlbTextureInfo;
         readonly pbrMetallicRoughness?: {
-            readonly baseColorTexture?: {
-                readonly extensions?: {
-                    readonly KHR_texture_transform?: unknown;
-                };
-            };
+            readonly baseColorTexture?: GlbTextureInfo;
         };
+    }>;
+    readonly textures?: ReadonlyArray<{
+        readonly extensions?: Readonly<Record<string, { readonly source?: number }>>;
+        readonly source?: number;
     }>;
     readonly meshes?: ReadonlyArray<{
         readonly primitives: ReadonlyArray<{
             readonly extensions?: Readonly<Record<string, unknown>>;
         }>;
     }>;
+}
+
+interface GlbTextureInfo {
+    readonly extensions?: {
+        readonly KHR_texture_transform?: unknown;
+    };
+    readonly index?: number;
 }
 
 export interface ParsedGlb {
@@ -67,4 +74,12 @@ export function expectKtx2Image(parsed: ParsedGlb): void {
     const image = parsed.json.images?.find(({ mimeType }) => mimeType === "image/ktx2");
     expect(image).toBeDefined();
     expect(getEmbeddedImageBytes(parsed, image as NonNullable<typeof image>).subarray(0, KTX2_MAGIC.byteLength)).toEqual(KTX2_MAGIC);
+}
+
+export function getTextureImageIndex(parsed: ParsedGlb, textureIndex: number | undefined): number | undefined {
+    if (textureIndex === undefined) {
+        return undefined;
+    }
+    const texture = parsed.json.textures?.[textureIndex];
+    return texture?.extensions?.KHR_texture_basisu?.source ?? texture?.source;
 }

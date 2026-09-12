@@ -7,10 +7,24 @@ export function generateFbxData(): string {
 }
 
 export function generateTexturedFbxData(texturePath: string): string {
-    return generateAsciiFbxData(texturePath);
+    return generateAsciiFbxData(texturePath, false);
 }
 
-function generateAsciiFbxData(texturePath?: string): string {
+export function generateTexturedFbxDataWithUvs(texturePath: string): string {
+    return generateAsciiFbxData(texturePath, true);
+}
+
+function generateAsciiFbxData(texturePath?: string, includeTextureCoordinates = false): string {
+    const textureCoordinates = !includeTextureCoordinates
+        ? ""
+        : `
+        LayerElementUV: 0 {
+            MappingInformationType: "ByPolygonVertex"
+            ReferenceInformationType: "Direct"
+            UV: *6 {
+                a: 0,0,1,0,0,1
+            }
+        }`;
     const materialObjects =
         texturePath === undefined
             ? ""
@@ -59,7 +73,7 @@ Objects:  {
             Normals: *9 {
                 a: 0,0,1,0,0,1,0,0,1
             }
-        }
+        }${textureCoordinates}
     }
     Model: 2, "Model::Triangle", "Mesh" {
     }${materialObjects}
