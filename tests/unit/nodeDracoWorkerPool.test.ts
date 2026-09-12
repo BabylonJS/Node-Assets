@@ -9,27 +9,59 @@ describe("Node Draco worker pool", () => {
         expect(_getNodeWorkerCount(12)).toBe(4);
     });
 
-    it("rejects a worker startup failure and retries with a new worker", async () => {
+    it("rejects a worker startup failure and retries with a new worker later", async () => {
         let attempts = 0;
-        const pool = new _NodeDracoWorkerPool(1, async (onFatalError) => {
-            attempts++;
-            if (attempts === 1) {
-                throw new Error("startup failed");
-            }
-            return new FakeWorker(onFatalError, (worker) => worker.sendSuccess());
-        });
+        const pool = new _NodeDracoWorkerPool(
+            1,
+            (onFatalError) => {
+                attempts++;
+                const worker = new FakeWorker(onFatalError, (currentWorker) => currentWorker.sendSuccess());
+                return {
+                    worker,
+                    ready: attempts === 1 ? Promise.reject(new Error("startup failed")) : Promise.resolve(),
+                };
+            },
+            1000,
+            10
+        );
 
         await expect(runActionAsync(pool)).rejects.toBeDefined();
+        await expect(runActionAsync(pool)).rejects.toBeDefined();
+        expect(attempts).toBe(1);
+        await new Promise((resolve) => setTimeout(resolve, 20));
         await expect(runActionAsync(pool)).resolves.toBe("done");
         expect(attempts).toBe(2);
         pool.dispose();
     });
 
+    it("rejects delayed actions after startup failure without repeated worker churn", async () => {
+        let attempts = 0;
+        const pool = new _NodeDracoWorkerPool(
+            1,
+            (onFatalError) => {
+                attempts++;
+                const worker = new FakeWorker(onFatalError, () => undefined);
+                return { ready: Promise.reject(new Error("startup failed")), worker };
+            },
+            1000,
+            20
+        );
+
+        await expect(runActionAsync(pool)).rejects.toBeDefined();
+        for (let index = 0; index < 5; index++) {
+            await new Promise((resolve) => setImmediate(resolve));
+            await expect(runActionAsync(pool)).rejects.toBeDefined();
+        }
+        expect(attempts).toBe(1);
+        pool.dispose();
+    });
+
     it("rejects a queued batch after one startup failure without repeated worker churn", async () => {
         let attempts = 0;
-        const pool = new _NodeDracoWorkerPool(1, async () => {
+        const pool = new _NodeDracoWorkerPool(1, (onFatalError) => {
             attempts++;
-            throw new Error("startup failed");
+            const worker = new FakeWorker(onFatalError, () => undefined);
+            return { ready: Promise.reject(new Error("startup failed")), worker };
         });
 
         const results = await Promise.allSettled(Array.from({ length: 20 }, () => runActionAsync(pool)));
@@ -41,14 +73,23 @@ describe("Node Draco worker pool", () => {
 
     it("recovers after an active worker exits unexpectedly", async () => {
         let attempts = 0;
-        const pool = new _NodeDracoWorkerPool(1, async (onFatalError) => {
-            attempts++;
-            return attempts === 1
-                ? new FakeWorker(onFatalError, (worker) => queueMicrotask(() => worker.fail(new Error("worker exited"))))
-                : new FakeWorker(onFatalError, (worker) => worker.sendSuccess());
-        });
+        const pool = new _NodeDracoWorkerPool(
+            1,
+            (onFatalError) => {
+                attempts++;
+                const worker =
+                    attempts === 1
+                        ? new FakeWorker(onFatalError, (currentWorker) => queueMicrotask(() => currentWorker.fail(new Error("worker exited"))))
+                        : new FakeWorker(onFatalError, (currentWorker) => currentWorker.sendSuccess());
+                return { ready: Promise.resolve(), worker };
+            },
+            1000,
+            10
+        );
 
         await expect(runActionAsync(pool)).rejects.toBeDefined();
+        await expect(runActionAsync(pool)).rejects.toBeDefined();
+        await new Promise((resolve) => setTimeout(resolve, 20));
         await expect(runActionAsync(pool)).resolves.toBe("done");
         expect(attempts).toBe(2);
         pool.dispose();
@@ -57,15 +98,16 @@ describe("Node Draco worker pool", () => {
     it("settles synchronous post failures without discarding a healthy worker", async () => {
         let posts = 0;
         let attempts = 0;
-        const pool = new _NodeDracoWorkerPool(1, async (onFatalError) => {
+        const pool = new _NodeDracoWorkerPool(1, (onFatalError) => {
             attempts++;
-            return new FakeWorker(onFatalError, (worker) => {
+            const worker = new FakeWorker(onFatalError, (currentWorker) => {
                 posts++;
                 if (posts === 1) {
                     throw new Error("post failed");
                 }
-                worker.sendSuccess();
+                currentWorker.sendSuccess();
             });
+            return { ready: Promise.resolve(), worker };
         });
 
         await expect(runActionAsync(pool)).rejects.toBeDefined();
@@ -77,9 +119,10 @@ describe("Node Draco worker pool", () => {
     it("does not create more workers than its bound", async () => {
         let workersCreated = 0;
         const completions: Array<() => void> = [];
-        const pool = new _NodeDracoWorkerPool(2, async (onFatalError) => {
+        const pool = new _NodeDracoWorkerPool(2, (onFatalError) => {
             workersCreated++;
-            return new FakeWorker(onFatalError, () => undefined);
+            const worker = new FakeWorker(onFatalError, () => undefined);
+            return { ready: Promise.resolve(), worker };
         });
 
         for (let index = 0; index < 6; index++) {
@@ -98,10 +141,10 @@ describe("Node Draco worker pool", () => {
         const workers: FakeWorker[] = [];
         const pool = new _NodeDracoWorkerPool(
             1,
-            async (onFatalError) => {
+            (onFatalError) => {
                 const worker = new FakeWorker(onFatalError, (currentWorker) => currentWorker.sendSuccess());
                 workers.push(worker);
-                return worker;
+                return { ready: Promise.resolve(), worker };
             },
             10
         );
@@ -116,26 +159,25 @@ describe("Node Draco worker pool", () => {
         pool.dispose();
     });
 
-    it("settles an action when disposed during worker initialization", async () => {
-        let resolveWorker: ((worker: FakeWorker) => void) | undefined;
-        const pool = new _NodeDracoWorkerPool(
-            1,
-            (onFatalError) =>
-                new Promise((resolve) => {
-                    resolveWorker = () => resolve(new FakeWorker(onFatalError, (worker) => worker.sendSuccess()));
-                })
-        );
+    it("settles an action and terminates its worker when disposed during initialization", async () => {
+        let resolveInitialization: (() => void) | undefined;
+        let worker: FakeWorker | undefined;
+        const pool = new _NodeDracoWorkerPool(1, (onFatalError) => {
+            worker = new FakeWorker(onFatalError, (currentWorker) => currentWorker.sendSuccess());
+            return {
+                ready: new Promise((resolve) => {
+                    resolveInitialization = resolve;
+                }),
+                worker,
+            };
+        });
         const result = runActionAsync(pool);
 
         pool.dispose();
 
         await expect(result).rejects.toBeDefined();
-        resolveWorker?.(
-            new FakeWorker(
-                () => undefined,
-                () => undefined
-            )
-        );
+        expect(worker?.terminated).toBe(true);
+        resolveInitialization?.();
     });
 });
 

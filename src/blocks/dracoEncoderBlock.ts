@@ -43,11 +43,10 @@ async function prepareDefaultEncoderAsync(DracoEncoder: DracoEncoderConstructor)
     let configuration: IDracoCodecConfiguration;
     try {
         configuration = await preparationPromise;
-    } catch (error) {
+    } finally {
         if (defaultEncoderPreparationPromise === preparationPromise) {
             defaultEncoderPreparationPromise = undefined;
         }
-        throw error;
     }
 
     if (!isBabylonDefaultConfiguration(DracoEncoder.DefaultConfiguration)) {
@@ -71,7 +70,12 @@ async function createDefaultEncoderConfigurationAsync(): Promise<IDracoCodecConf
 }
 
 function isNode(): boolean {
-    return typeof process === "object" && process.versions?.node !== undefined;
+    return (
+        typeof process === "object" &&
+        process.release?.name === "node" &&
+        process.versions?.node !== undefined &&
+        !(process.versions.electron !== undefined && typeof window === "object")
+    );
 }
 
 function isBabylonDefaultConfiguration(configuration: IDracoCodecConfiguration): boolean {
