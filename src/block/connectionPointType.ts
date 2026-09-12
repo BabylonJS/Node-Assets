@@ -21,7 +21,6 @@ export const UrlType = /* @__PURE__ */ defineConnectionPointType<string>("url", 
 
 export const FileType = /* @__PURE__ */ defineConnectionPointType<File>("file", (value): value is File => value instanceof File);
 
-/** Per-export glTF mesh compression settings supplied by an opt-in compressor block. */
 export type GltfMeshCompressionOptions = Required<Pick<IExportOptions, "meshCompressionMethod">>;
 
 const gltfMeshCompressionOptions = /* @__PURE__ */ Symbol("gltf-mesh-compression-options");
