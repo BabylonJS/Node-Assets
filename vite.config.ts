@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import dts from "vite-plugin-dts";
 
 export default defineConfig({
+    base: "./",
     build: {
         target: "es2022",
         sourcemap: true,
@@ -12,7 +13,7 @@ export default defineConfig({
         },
         rollupOptions: {
             // Runtime and platform-specific dependencies are not bundled.
-            external: [/^@babylonjs\//, /^babylonpress-ktx2-encoder$/, /^node:/, /^sharp$/],
+            external: (id) => !isBundledDracoAsset(id) && (/^@babylonjs\//.test(id) || /^babylonpress-ktx2-encoder$/.test(id) || /^node:/.test(id) || /^sharp$/.test(id)),
         },
     },
     plugins: [
@@ -22,3 +23,7 @@ export default defineConfig({
         }),
     ],
 });
+
+function isBundledDracoAsset(id: string): boolean {
+    return id === "@babylonjs/core/assets/Draco/draco_encoder.wasm?url&no-inline" || id === "@babylonjs/core/assets/Draco/draco_encoder_wasm_wrapper.js?url&no-inline";
+}

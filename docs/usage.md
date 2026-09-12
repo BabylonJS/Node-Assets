@@ -37,8 +37,10 @@ Named by noun.
 - `DracoEncoderBlock`
     - Input: none
     - Output: output (GltfMeshCompressionOptions)
-    - Resources: Babylon default DracoEncoder
-    - Behavior: Prepares Babylon's default Draco encoder and provides `{ meshCompressionMethod: "Draco" }` as the per-export glTF mesh compression options that enable it. Connect its output to `GltfOutputBlock`'s `geometryCompressionOptions` port.
+    - Resources: Babylon default DracoEncoder, package-owned browser encoder assets, and a shared Node worker-thread pool
+    - Behavior: Lazily prepares Babylon's default Draco encoder and provides `{ meshCompressionMethod: "Draco" }` as the per-export glTF mesh compression options that enable it. Browser builds load the emitted encoder wrapper and WebAssembly from the application's own origin. Node uses an auto-releasing worker pool sized to half the available processors, with a minimum of one and maximum of four workers. Caller-customized Babylon default configuration is left unchanged. Connect its output to `GltfOutputBlock`'s `geometryCompressionOptions` port.
+
+Browser deployments must still permit blob workers and WebAssembly under their Content Security Policy, typically through `worker-src blob:` and `script-src 'wasm-unsafe-eval'` where the target browser requires them.
 
 # Transforms
 
