@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { Block } from "../../src/blocks/block";
 import { defineBlock, value } from "../../src/blocks/blockDefinition";
-import { NodeAsset } from "../../src/nodeAsset/nodeAsset";
+import { NodeAsset } from "../../src/nodeAsset";
 import { ScaleDefinition, NumberDefinition, OtherNumberDefinition, NumberType } from "../helpers/numberBlocks";
 
 describe("Block class", () => {

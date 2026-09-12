@@ -1,6 +1,6 @@
-import type { _BlockRuntime, Block } from "../blocks/block";
-import type { _InputBlockDefinition } from "../blocks/blockDefinition";
-import type { ConnectionPointValue } from "../connectionPoints/connectionPoint";
+import type { _BlockRuntime, Block } from "./blocks/block";
+import type { _InputBlockDefinition } from "./blocks/blockDefinition";
+import type { ConnectionPointValue } from "./connectionPoints/connectionPoint";
 import type { NodeAsset } from "./nodeAsset";
 
 type AnyBlock = _BlockRuntime;
