@@ -15,7 +15,12 @@ const FbxInputBlockDefinition = /* @__PURE__ */ defineBlock({
     resources: {
         engine: NullEngineResource,
     },
-    runAsync: (url, _config, { engine }) => loadSingleFileSceneWithPluginAsync(url, engine, registerFbxLoader, { pluginExtension: ".fbx" }),
+    runAsync: (url, _config, { engine }) => {
+        return loadSingleFileSceneWithPluginAsync(url, engine, registerFbxLoader, {
+            pluginExtension: ".fbx",
+            createDirectPluginAsync: createFbxLoaderAsync,
+        });
+    },
 });
 
 /** Loads an FBX URL into a Babylon.js scene. */
@@ -28,13 +33,15 @@ export class FbxInputBlock extends Block<typeof FbxInputBlockDefinition> {
 function registerFbxLoader(): void {
     RegisterSceneLoaderPlugin({
         ...FBXFileLoaderMetadata,
-        createPlugin: async (options: SceneLoaderPluginOptions) => {
-            const [{ RegisterStandardMaterial }, { FBXFileLoader }] = await Promise.all([
-                import("@babylonjs/core/Materials/standardMaterial.pure.js"),
-                import("@babylonjs/loaders/FBX/fbxFileLoader.pure.js"),
-            ]);
-            RegisterStandardMaterial();
-            return new FBXFileLoader(options[FBXFileLoaderMetadata.name]);
-        },
+        createPlugin: createFbxLoaderAsync,
     } satisfies ISceneLoaderPluginFactory);
+}
+
+async function createFbxLoaderAsync(options?: SceneLoaderPluginOptions) {
+    const [{ RegisterStandardMaterial }, { FBXFileLoader }] = await Promise.all([
+        import("@babylonjs/core/Materials/standardMaterial.pure.js"),
+        import("@babylonjs/loaders/FBX/fbxFileLoader.pure.js"),
+    ]);
+    RegisterStandardMaterial();
+    return new FBXFileLoader(options?.[FBXFileLoaderMetadata.name]);
 }

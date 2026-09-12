@@ -15,7 +15,12 @@ const StlInputBlockDefinition = /* @__PURE__ */ defineBlock({
     resources: {
         engine: NullEngineResource,
     },
-    runAsync: (url, _config, { engine }) => loadSingleFileSceneWithPluginAsync(url, engine, registerStlLoader, { pluginExtension: ".stl" }),
+    runAsync: (url, _config, { engine }) => {
+        return loadSingleFileSceneWithPluginAsync(url, engine, registerStlLoader, {
+            pluginExtension: ".stl",
+            createDirectPluginAsync: createStlLoaderAsync,
+        });
+    },
 });
 
 /** Loads an STL URL into a Babylon.js scene. */
@@ -28,13 +33,15 @@ export class StlInputBlock extends Block<typeof StlInputBlockDefinition> {
 function registerStlLoader(): void {
     RegisterSceneLoaderPlugin({
         ...STLFileLoaderMetadata,
-        createPlugin: async () => {
-            const [{ RegisterStandardMaterial }, { STLFileLoader }] = await Promise.all([
-                import("@babylonjs/core/Materials/standardMaterial.pure.js"),
-                import("@babylonjs/loaders/STL/stlFileLoader.pure.js"),
-            ]);
-            RegisterStandardMaterial();
-            return new STLFileLoader();
-        },
+        createPlugin: createStlLoaderAsync,
     } satisfies ISceneLoaderPluginFactory);
+}
+
+async function createStlLoaderAsync() {
+    const [{ RegisterStandardMaterial }, { STLFileLoader }] = await Promise.all([
+        import("@babylonjs/core/Materials/standardMaterial.pure.js"),
+        import("@babylonjs/loaders/STL/stlFileLoader.pure.js"),
+    ]);
+    RegisterStandardMaterial();
+    return new STLFileLoader();
 }

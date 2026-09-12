@@ -135,11 +135,17 @@ function rewriteObjReferences(obj: string, references: ObjReferences, mtlDataUri
     }
     replacements.push({ ...references.mtl, replacement: `${references.mtl.indentation}mtllib ${mtlDataUri}` });
 
-    let rewritten = obj;
-    for (const replacement of replacements.sort((left, right) => right.start - left.start)) {
-        rewritten = `${rewritten.slice(0, replacement.start)}${replacement.replacement}${rewritten.slice(replacement.end)}`;
+    const parts: string[] = [];
+    let cursor = 0;
+    for (const replacement of replacements.sort((left, right) => left.start - right.start)) {
+        if (replacement.start < cursor) {
+            throw new Error(`Unable to rewrite overlapping OBJ references in "${objUrl}".`);
+        }
+        parts.push(obj.slice(cursor, replacement.start), replacement.replacement);
+        cursor = replacement.end;
     }
-    return rewritten;
+    parts.push(obj.slice(cursor));
+    return parts.join("");
 }
 
 interface RewrittenMtl {

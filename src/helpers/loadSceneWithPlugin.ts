@@ -1,5 +1,5 @@
 import type { AbstractEngine } from "@babylonjs/core/Engines/abstractEngine.js";
-import type { LoadOptions } from "@babylonjs/core/Loading/sceneLoader.js";
+import type { ISceneLoaderPlugin, ISceneLoaderPluginAsync, LoadOptions } from "@babylonjs/core/Loading/sceneLoader.js";
 import type { Scene } from "@babylonjs/core/scene.js";
 
 type SceneSource = string | ArrayBufferView;
@@ -11,8 +11,11 @@ interface SceneLoadPreparation {
 }
 
 type PrepareSceneLoadAsync = (response: Response, resolvedUrl: string, signal: AbortSignal) => Promise<SceneLoadPreparation>;
+type DirectSceneLoaderPlugin = Pick<ISceneLoaderPlugin, "load" | "name"> | Pick<ISceneLoaderPluginAsync, "loadAsync" | "name">;
+type CreateDirectSceneLoaderPluginAsync = () => Promise<DirectSceneLoaderPlugin>;
 
 interface SingleFileSceneLoadOptions {
+    readonly createDirectPluginAsync?: CreateDirectSceneLoaderPluginAsync;
     readonly includeRootUrl?: boolean;
     readonly pluginExtension?: string;
     readonly pluginOptions?: LoadOptions["pluginOptions"];
@@ -46,15 +49,20 @@ export async function loadSingleFileSceneWithPluginAsync(
     try {
         const response = await fetchOrThrowAsync(url, abortController.signal);
         const resolvedUrl = response.url || url;
+        const rootUrl = new URL(".", resolvedUrl).href;
+        const name = new URL(resolvedUrl).pathname.split("/").pop() ?? "";
+        if (options.prepareSceneLoadAsync === undefined && options.createDirectPluginAsync !== undefined) {
+            return await loadFetchedSceneWithPluginAsync(await response.arrayBuffer(), engine, rootUrl, name, options.createDirectPluginAsync);
+        }
         const preparation =
             options.prepareSceneLoadAsync === undefined
                 ? { source: await responseToDataUriAsync(response) }
                 : await options.prepareSceneLoadAsync(response, resolvedUrl, abortController.signal);
         const loadOptions: LoadOptions = {
-            name: new URL(resolvedUrl).pathname.split("/").pop() ?? "",
+            name,
         };
         if (options.includeRootUrl !== false) {
-            loadOptions.rootUrl = new URL(".", resolvedUrl).href;
+            loadOptions.rootUrl = rootUrl;
         }
         const resolvedPluginExtension = preparation.pluginExtension ?? options.pluginExtension;
         if (resolvedPluginExtension !== undefined) {
@@ -68,6 +76,46 @@ export async function loadSingleFileSceneWithPluginAsync(
     } finally {
         abortController.abort();
     }
+}
+
+async function loadFetchedSceneWithPluginAsync(
+    data: ArrayBuffer,
+    engine: AbstractEngine,
+    rootUrl: string,
+    name: string,
+    createPluginAsync: CreateDirectSceneLoaderPluginAsync
+): Promise<Scene> {
+    const [{ Scene }, plugin] = await Promise.all([import("@babylonjs/core/scene.js"), createPluginAsync()]);
+    const scene = new Scene(engine);
+
+    try {
+        const loadingToken = {};
+        scene.addPendingData(loadingToken);
+        try {
+            if (isAsyncSceneLoaderPlugin(plugin)) {
+                await plugin.loadAsync(scene, data, rootUrl, undefined, name);
+            } else {
+                let pluginError: { readonly exception?: unknown; readonly message: string } | undefined;
+                const loaded = plugin.load(scene, data, rootUrl, (message, exception) => {
+                    pluginError = { exception, message };
+                });
+                if (!loaded) {
+                    throw pluginError?.exception ?? new Error(pluginError?.message ?? `The ${plugin.name} loader failed.`);
+                }
+            }
+            scene.loadingPluginName = plugin.name;
+        } finally {
+            scene.removePendingData(loadingToken);
+        }
+        return scene;
+    } catch (error) {
+        scene.dispose();
+        throw error;
+    }
+}
+
+function isAsyncSceneLoaderPlugin(plugin: DirectSceneLoaderPlugin): plugin is Pick<ISceneLoaderPluginAsync, "loadAsync" | "name"> {
+    return "loadAsync" in plugin;
 }
 
 export function isHttpUrl(url: string): boolean {
