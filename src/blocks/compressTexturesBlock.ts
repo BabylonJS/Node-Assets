@@ -83,7 +83,14 @@ async function compressTexturesAsync(scene: BabylonScene): Promise<BabylonScene>
             continue;
         }
         for (const reference of references) {
-            if (!(reference.texture instanceof Texture) || reference.texture.isCube || reference.texture.is3D || reference.texture.is2DArray || reference.texture.isRenderTarget) {
+            if (
+                !(reference.texture instanceof Texture) ||
+                reference.texture.getClassName() !== "Texture" ||
+                reference.texture.isCube ||
+                reference.texture.is3D ||
+                reference.texture.is2DArray ||
+                reference.texture.isRenderTarget
+            ) {
                 continue;
             }
             const referencesBySemantics = referencesByTexture.get(reference.texture) ?? new Map<boolean, TextureReference[]>();
@@ -384,19 +391,25 @@ function getSourceImageIdentity(texture: Texture): object | string {
 }
 
 async function getSourceImageAsync(textures: readonly Texture[], getCachedImageAsync: (texture: BaseTexture) => Promise<SourceImage | null>): Promise<SourceImage | null> {
+    const representativeTexture = textures[0];
+    if (representativeTexture === undefined) {
+        return null;
+    }
+
+    const cachedImage = await getCachedImageAsync(representativeTexture);
+    if (cachedImage !== null) {
+        return cachedImage;
+    }
+
+    const texturesByUrl = new Map<string, Texture>();
     for (const texture of textures) {
-        const cachedImage = await getCachedImageAsync(texture);
-        if (cachedImage !== null) {
-            return cachedImage;
+        const sourceUrl = texture.url;
+        if (sourceUrl !== null && sourceUrl.length > 0 && !texturesByUrl.has(sourceUrl)) {
+            texturesByUrl.set(sourceUrl, texture);
         }
     }
 
-    for (const texture of textures) {
-        const sourceUrl = texture.url;
-        if (sourceUrl === null || sourceUrl.length === 0) {
-            continue;
-        }
-
+    for (const [sourceUrl, texture] of texturesByUrl) {
         const response = await fetch(sourceUrl);
         if (!response.ok) {
             throw new Error(`Failed to load texture "${sourceUrl}": HTTP ${response.status} ${response.statusText}`.trim());
