@@ -4,7 +4,7 @@ import type { Scene as BabylonScene } from "@babylonjs/core/scene.js";
 import { Block, type BlockOptions } from "../block/block";
 import { defineBlock } from "../block/blockDefinition";
 import { BabylonSceneType, UrlType } from "../block/connectionPointType";
-import { createDataUri, fetchOrThrowAsync, isHttpUrl, loadSceneWithPluginAsync } from "../helpers/loadSceneWithPlugin";
+import { createDataUri, fetchOrThrowAsync, loadSingleFileSceneWithPluginAsync } from "../helpers/loadSceneWithPlugin";
 import { NullEngineResource } from "../resources/nullEngineResource";
 
 const MaximumConcurrentTextureFetches = 8;
@@ -18,43 +18,40 @@ const ObjInputBlockDefinition = /* @__PURE__ */ defineBlock({
     },
     runAsync: async (url, _config, { engine }) => {
         const pluginPromise = import("@babylonjs/loaders/OBJ/index.js");
-        if (!isHttpUrl(url)) {
-            return loadSceneWithPluginAsync(url, engine, () => pluginPromise, createObjLoadOptions());
-        }
+        let textureAssets = new Map<string, TextureAsset>();
+        let materialTokens = new Map<string, string>();
+        const scene = await loadSingleFileSceneWithPluginAsync(url, engine, () => pluginPromise, {
+            includeRootUrl: false,
+            pluginExtension: ".obj",
+            pluginOptions: {
+                obj: {
+                    materialLoadingFailsSilently: false,
+                },
+            },
+            prepareSceneLoadAsync: async (objResponse, resolvedObjUrl, signal) => {
+                const obj = await objResponse.text();
+                const references = analyzeObjReferences(obj);
 
-        const abortController = new AbortController();
-        try {
-            const objResponse = await fetchOrThrowAsync(url, abortController.signal);
-            const resolvedObjUrl = objResponse.url || url;
-            const obj = await objResponse.text();
-            const references = analyzeObjReferences(obj);
+                let source = obj;
+                if (references.mtl?.value) {
+                    const mtlUrl = resolveDependencyUrl(references.mtl.value, resolvedObjUrl, "MTL");
+                    const mtlResponse = await fetchOrThrowAsync(mtlUrl, signal);
+                    const resolvedMtlUrl = mtlResponse.url || mtlUrl;
+                    const mtl = await mtlResponse.text();
+                    const rewritten = await rewriteMtlAsync(mtl, resolvedMtlUrl, signal);
+                    textureAssets = rewritten.textureAssets;
+                    materialTokens = rewritten.materialTokens;
+                    source = rewriteObjReferences(obj, references, createTextDataUri(rewritten.source), materialTokens, resolvedObjUrl);
+                } else if (references.mtl) {
+                    throw new Error(`Invalid OBJ file "${resolvedObjUrl}": mtllib has no material library path.`);
+                }
 
-            let source = obj;
-            let textureAssets = new Map<string, TextureAsset>();
-            let materialTokens = new Map<string, string>();
-            if (references.mtl?.value) {
-                const mtlUrl = resolveDependencyUrl(references.mtl.value, resolvedObjUrl, "MTL");
-                const mtlResponse = await fetchOrThrowAsync(mtlUrl, abortController.signal);
-                const resolvedMtlUrl = mtlResponse.url || mtlUrl;
-                const mtl = await mtlResponse.text();
-                const rewritten = await rewriteMtlAsync(mtl, resolvedMtlUrl, abortController.signal);
-                textureAssets = rewritten.textureAssets;
-                materialTokens = rewritten.materialTokens;
-                source = rewriteObjReferences(obj, references, createTextDataUri(rewritten.source), materialTokens, resolvedObjUrl);
-            } else if (references.mtl) {
-                throw new Error(`Invalid OBJ file "${resolvedObjUrl}": mtllib has no material library path.`);
-            }
-
-            const scene = await loadSceneWithPluginAsync(createDirectTextSource(source), engine, () => pluginPromise, {
-                ...createObjLoadOptions(),
-                name: new URL(resolvedObjUrl).pathname.split("/").pop() ?? "",
-            });
-            await attachTextureDataAsync(scene, textureAssets);
-            restoreMaterialNames(scene, materialTokens);
-            return scene;
-        } finally {
-            abortController.abort();
-        }
+                return { source: createDirectTextSource(source) };
+            },
+        });
+        await attachTextureDataAsync(scene, textureAssets);
+        restoreMaterialNames(scene, materialTokens);
+        return scene;
     },
 });
 
@@ -63,17 +60,6 @@ export class ObjInputBlock extends Block<typeof ObjInputBlockDefinition> {
     public constructor(options?: BlockOptions<typeof ObjInputBlockDefinition>) {
         super(ObjInputBlockDefinition, options);
     }
-}
-
-function createObjLoadOptions() {
-    return {
-        pluginExtension: ".obj",
-        pluginOptions: {
-            obj: {
-                materialLoadingFailsSilently: false,
-            },
-        },
-    } as const;
 }
 
 interface ObjLineReference {

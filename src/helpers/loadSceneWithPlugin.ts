@@ -12,6 +12,13 @@ interface SceneLoadPreparation {
 
 type PrepareSceneLoadAsync = (response: Response, resolvedUrl: string, signal: AbortSignal) => Promise<SceneLoadPreparation>;
 
+interface SingleFileSceneLoadOptions {
+    readonly includeRootUrl?: boolean;
+    readonly pluginExtension?: string;
+    readonly pluginOptions?: LoadOptions["pluginOptions"];
+    readonly prepareSceneLoadAsync?: PrepareSceneLoadAsync;
+}
+
 export async function loadSceneWithPluginAsync(source: SceneSource, engine: AbstractEngine, loadPluginAsync: () => Promise<unknown>, options?: LoadOptions): Promise<Scene> {
     const [{ LoadSceneAsync }] = await Promise.all([import("@babylonjs/core/Loading/sceneLoader.js"), loadPluginAsync()]);
     return LoadSceneAsync(source, engine, options);
@@ -20,12 +27,18 @@ export async function loadSceneWithPluginAsync(source: SceneSource, engine: Abst
 export async function loadSingleFileSceneWithPluginAsync(
     url: string,
     engine: AbstractEngine,
-    pluginExtension: string | undefined,
     loadPluginAsync: () => Promise<unknown>,
-    prepareSceneLoadAsync?: PrepareSceneLoadAsync
+    options: SingleFileSceneLoadOptions = {}
 ): Promise<Scene> {
     if (!isHttpUrl(url)) {
-        return loadSceneWithPluginAsync(url, engine, loadPluginAsync, pluginExtension === undefined ? undefined : { pluginExtension });
+        if (options.pluginExtension === undefined && options.pluginOptions === undefined) {
+            return loadSceneWithPluginAsync(url, engine, loadPluginAsync);
+        }
+
+        return loadSceneWithPluginAsync(url, engine, loadPluginAsync, {
+            ...(options.pluginExtension === undefined ? {} : { pluginExtension: options.pluginExtension }),
+            ...(options.pluginOptions === undefined ? {} : { pluginOptions: options.pluginOptions }),
+        });
     }
 
     const abortController = new AbortController();
@@ -33,19 +46,24 @@ export async function loadSingleFileSceneWithPluginAsync(
         const response = await fetchOrThrowAsync(url, abortController.signal);
         const resolvedUrl = response.url || url;
         const preparation =
-            prepareSceneLoadAsync === undefined ? { source: await responseToDataUriAsync(response) } : await prepareSceneLoadAsync(response, resolvedUrl, abortController.signal);
-        const options: LoadOptions = {
-            rootUrl: new URL(".", resolvedUrl).href,
+            options.prepareSceneLoadAsync === undefined
+                ? { source: await responseToDataUriAsync(response) }
+                : await options.prepareSceneLoadAsync(response, resolvedUrl, abortController.signal);
+        const loadOptions: LoadOptions = {
             name: new URL(resolvedUrl).pathname.split("/").pop() ?? "",
         };
-        const resolvedPluginExtension = preparation.pluginExtension ?? pluginExtension;
+        if (options.includeRootUrl !== false) {
+            loadOptions.rootUrl = new URL(".", resolvedUrl).href;
+        }
+        const resolvedPluginExtension = preparation.pluginExtension ?? options.pluginExtension;
         if (resolvedPluginExtension !== undefined) {
-            options.pluginExtension = resolvedPluginExtension;
+            loadOptions.pluginExtension = resolvedPluginExtension;
         }
-        if (preparation.pluginOptions !== undefined) {
-            options.pluginOptions = preparation.pluginOptions;
+        const resolvedPluginOptions = preparation.pluginOptions ?? options.pluginOptions;
+        if (resolvedPluginOptions !== undefined) {
+            loadOptions.pluginOptions = resolvedPluginOptions;
         }
-        return await loadSceneWithPluginAsync(preparation.source, engine, loadPluginAsync, options);
+        return await loadSceneWithPluginAsync(preparation.source, engine, loadPluginAsync, loadOptions);
     } finally {
         abortController.abort();
     }

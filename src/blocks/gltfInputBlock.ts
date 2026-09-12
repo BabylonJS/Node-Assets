@@ -12,12 +12,8 @@ const GltfInputBlockDefinition = /* @__PURE__ */ defineBlock({
         engine: NullEngineResource,
     },
     runAsync: (url, _config, { engine }) =>
-        loadSingleFileSceneWithPluginAsync(
-            url,
-            engine,
-            undefined,
-            () => import("@babylonjs/loaders/glTF/index.js"),
-            async (response, resolvedUrl, signal) => {
+        loadSingleFileSceneWithPluginAsync(url, engine, () => import("@babylonjs/loaders/glTF/index.js"), {
+            prepareSceneLoadAsync: async (response, resolvedUrl, signal) => {
                 const format = await readGltfResponseAsync(response, resolvedUrl);
                 return {
                     source: format.source,
@@ -34,8 +30,8 @@ const GltfInputBlockDefinition = /* @__PURE__ */ defineBlock({
                         },
                     },
                 };
-            }
-        ),
+            },
+        }),
 });
 
 /** Loads a glTF or GLB URL into a Babylon.js scene. */
