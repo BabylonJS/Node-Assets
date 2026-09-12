@@ -391,7 +391,7 @@ function getSourceImageIdentity(texture: Texture): object | string {
 }
 
 async function getSourceImageAsync(textures: readonly Texture[], getCachedImageAsync: (texture: BaseTexture) => Promise<SourceImage | null>): Promise<SourceImage | null> {
-    const representativeTexture = textures[0];
+    const representativeTexture = textures.find(hasImageMimeType) ?? textures[0];
     if (representativeTexture === undefined) {
         return null;
     }
@@ -404,7 +404,8 @@ async function getSourceImageAsync(textures: readonly Texture[], getCachedImageA
     const texturesByUrl = new Map<string, Texture>();
     for (const texture of textures) {
         const sourceUrl = texture.url;
-        if (sourceUrl !== null && sourceUrl.length > 0 && !texturesByUrl.has(sourceUrl)) {
+        const currentTexture = sourceUrl === null ? undefined : texturesByUrl.get(sourceUrl);
+        if (sourceUrl !== null && sourceUrl.length > 0 && (currentTexture === undefined || (!hasImageMimeType(currentTexture) && hasImageMimeType(texture)))) {
             texturesByUrl.set(sourceUrl, texture);
         }
     }
@@ -428,13 +429,18 @@ async function getSourceImageMimeTypeAsync(texture: Texture, sourceUrl: string, 
     if (responseMimeType?.startsWith("image/")) {
         return responseMimeType;
     }
-    if (texture.mimeType?.startsWith("image/")) {
-        return texture.mimeType;
+    const textureMimeType = texture.mimeType?.toLowerCase();
+    if (textureMimeType?.startsWith("image/")) {
+        return textureMimeType;
     }
 
     const { GetMimeType } = await import("@babylonjs/core/Misc/fileTools.js");
     const inferredMimeType = GetMimeType(sourceUrl.split(/[?#]/, 1)[0] ?? sourceUrl);
     return inferredMimeType?.startsWith("image/") ? inferredMimeType : undefined;
+}
+
+function hasImageMimeType(texture: Texture): boolean {
+    return texture.mimeType?.toLowerCase().startsWith("image/") === true;
 }
 
 function isKtx2(source: Uint8Array): boolean {

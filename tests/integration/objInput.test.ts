@@ -225,6 +225,73 @@ describe("OBJ input", () => {
             vi.unstubAllGlobals();
         }
     });
+
+    it("uses image MIME metadata from a shared extensionless texture wrapper", async () => {
+        const rootUrl = "https://example.com/assets/model.obj";
+        const mtlUrl = "https://example.com/assets/materials/model.mtl";
+        const textureUrl = "https://example.com/assets/materials/textures/diffuse";
+        vi.stubGlobal(
+            "fetch",
+            vi.fn((input: string | URL | Request) => {
+                switch (String(input)) {
+                    case rootUrl:
+                        return Promise.resolve(new Response(generateTexturedObjData(), { headers: { "content-type": "text/plain" } }));
+                    case mtlUrl:
+                        return Promise.resolve(new Response(generateMtlData("textures/diffuse"), { headers: { "content-type": "text/plain" } }));
+                    case textureUrl:
+                        return Promise.resolve(new Response(generateTextureData().buffer as ArrayBuffer, { headers: { "content-type": "application/octet-stream" } }));
+                    default:
+                        return Promise.reject(new Error(`Unexpected fetch: ${String(input)}`));
+                }
+            })
+        );
+
+        try {
+            const addMimeTypedWrapper = new Block(
+                defineBlock({
+                    type: "test.transform.add-mime-typed-texture-wrapper",
+                    input: BabylonSceneType,
+                    output: BabylonSceneType,
+                    run: (scene) => {
+                        const material = scene.materials[0];
+                        if (!(material instanceof StandardMaterial) || !(material.diffuseTexture instanceof Texture)) {
+                            throw new Error("Expected the OBJ loader to create a textured StandardMaterial.");
+                        }
+
+                        material.bumpTexture = new Texture(
+                            textureUrl,
+                            scene,
+                            false,
+                            false,
+                            Texture.TRILINEAR_SAMPLINGMODE,
+                            undefined,
+                            undefined,
+                            generateTextureData(),
+                            false,
+                            undefined,
+                            "image/png"
+                        );
+                        return scene;
+                    },
+                })
+            );
+            const source = new ObjInputBlock({ input: rootUrl });
+            const compressTextures = new CompressTexturesBlock();
+            const destination = new GltfOutputBlock();
+            source.output.connectTo(addMimeTypedWrapper.input);
+            addMimeTypedWrapper.output.connectTo(compressTextures.input);
+            compressTextures.output.connectTo(destination.input);
+
+            const parsed = await parseGlbAsync(await new NodeAsset({ name: "shared-texture-mime", outputBlock: destination }).executeAsync());
+
+            expect(parsed.json.extensionsUsed).toContain("KHR_texture_basisu");
+            expect(parsed.json.images).toHaveLength(2);
+            expect(parsed.json.images?.every(({ mimeType }) => mimeType === "image/ktx2")).toBe(true);
+            expectKtx2Image(parsed);
+        } finally {
+            vi.unstubAllGlobals();
+        }
+    });
 });
 
 async function roundTripAsync(source: ObjInputBlock): Promise<File> {
