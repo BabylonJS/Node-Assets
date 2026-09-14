@@ -39,6 +39,7 @@ TBD
 - `DracoEncoder`
     - Runtime data: initialized `EncoderModule` (`draco3dgltf`)
 - `MeshoptEncoder`
+    - Runtime data: `MeshoptEncoder` (`meshoptimizer`)
 - `KTX2Encoder`
 
 # Blocks
