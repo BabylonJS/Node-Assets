@@ -19,10 +19,6 @@ export interface GlbJson {
             };
         };
     }>;
-    readonly textures?: ReadonlyArray<{
-        readonly extensions?: Readonly<Record<string, { readonly source?: number }>>;
-        readonly source?: number;
-    }>;
     readonly meshes?: ReadonlyArray<{
         readonly primitives: ReadonlyArray<{
             readonly extensions?: Readonly<Record<string, unknown>>;

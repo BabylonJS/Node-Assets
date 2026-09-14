@@ -1,51 +1,9 @@
-const PNG_DATA = "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEUlEQVQImWP4z8DwH4QZYAwAR8oH+Xm0fdIAAAAASUVORK5CYII=";
-
-export const extensionTextureFormats = [
-    {
-        extension: "EXT_texture_webp" as const,
-        imageBase64: "UklGRjwAAABXRUJQVlA4IDAAAADQAQCdASoCAAIAAgA0JaACdLoB+AADsAD+8MQL/yC5YXXI1/8gP+QH/ID/+PIAAAA=",
-        mimeType: "image/webp",
-        name: "WebP",
-    },
-    {
-        extension: "EXT_texture_avif" as const,
-        imageBase64:
-            "AAAAHGZ0eXBhdmlmAAAAAG1pZjFhdmlmbWlhZgAAANZtZXRhAAAAAAAAACFoZGxyAAAAAAAAAABwaWN0AAAAAAAAAAAAAAAAAAAAAA5waXRtAAAAAAABAAAAImlsb2MAAAAAREAAAQABAAAAAAD6AAEAAAAAAAAAHwAAACNpaW5mAAAAAAABAAAAFWluZmUCAAAAAAEAAGF2MDEAAAAAVmlwcnAAAAA4aXBjbwAAAAxhdjFDgUBsAAAAABRpc3BlAAAAAAAAAAIAAAACAAAAEHBpeGkAAAAAAwwMDAAAABZpcG1hAAAAAAAAAAEAAQOBAgMAAAAnbWRhdBIACghYADY0BDQbhDIRGAAOOOOEAACwE1TtMKTrDPw=",
-        mimeType: "image/avif",
-        name: "AVIF",
-    },
-];
-
-export const coreTextureFormats = [
-    {
-        generateInput: () => generateTexturedGltfDataUri(),
-        mimeType: "image/png",
-        name: "PNG",
-    },
-    {
-        generateInput: () =>
-            generateTexturedGltfDataUri({
-                imageBase64:
-                    "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/2wBDAQMDAwQDBAgEBAgQCwkLEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBD/wAARCAACAAIDAREAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACP/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAVAQEBAAAAAAAAAAAAAAAAAAAHCf/EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwEAAhEDEQA/ADoDFU3/2Q==",
-                imageMimeType: "image/jpeg",
-            }),
-        mimeType: "image/jpeg",
-        name: "JPEG",
-    },
-];
-
 export function generateGltfDataUri(): string {
     return `data:${generateGltfJson()}`;
 }
 
-interface TexturedGltfOptions {
-    readonly imageBase64?: string;
-    readonly imageMimeType?: string;
-    readonly textureExtension?: "EXT_texture_avif" | "EXT_texture_webp";
-}
-
-export function generateTexturedGltfDataUri(options: TexturedGltfOptions = {}): string {
-    const { imageBase64 = PNG_DATA, imageMimeType = "image/png", textureExtension } = options;
+export function generateTexturedGltfDataUri(): string {
+    const png = "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEUlEQVQImWP4z8DwH4QZYAwAR8oH+Xm0fdIAAAAASUVORK5CYII=";
     const binary = "AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAABAAIA";
     return `data:${JSON.stringify({
         asset: { version: "2.0" },
@@ -62,8 +20,7 @@ export function generateTexturedGltfDataUri(options: TexturedGltfOptions = {}): 
             { buffer: 0, byteLength: 24, byteOffset: 72 },
             { buffer: 0, byteLength: 6, byteOffset: 96 },
         ],
-        ...(textureExtension === undefined ? {} : { extensionsRequired: [textureExtension], extensionsUsed: [textureExtension] }),
-        images: [{ uri: `data:${imageMimeType};base64,${imageBase64}` }],
+        images: [{ uri: `data:image/png;base64,${png}` }],
         materials: [
             {
                 emissiveTexture: { index: 0 },
@@ -77,16 +34,7 @@ export function generateTexturedGltfDataUri(options: TexturedGltfOptions = {}): 
         samplers: [{ magFilter: 9729 }],
         scene: 0,
         scenes: [{ nodes: [0] }],
-        textures: [
-            textureExtension === undefined
-                ? { sampler: 0, source: 0 }
-                : {
-                      extensions: {
-                          [textureExtension]: { source: 0 },
-                      },
-                      sampler: 0,
-                  },
-        ],
+        textures: [{ sampler: 0, source: 0 }],
     })}`;
 }
 

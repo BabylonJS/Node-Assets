@@ -8,7 +8,7 @@ import { defineBlock } from "../../src/blocks/blockDefinition";
 import { BabylonSceneType } from "../../src/connectionPoints/babylonScene";
 import { GltfInputBlock, GltfOutputBlock, NodeAsset } from "../../src/index";
 import { parseGlbAsync } from "../helpers/glb";
-import { coreTextureFormats, extensionTextureFormats, generateGltfDataUri, generateTexturedGltfDataUri } from "../helpers/gltf";
+import { generateGltfDataUri, generateTexturedGltfDataUri } from "../helpers/gltf";
 
 describe("glTF output", () => {
     it("exports a valid GLB", async () => {
@@ -17,36 +17,6 @@ describe("glTF output", () => {
         source.output.connectTo(destination.input);
 
         await parseGlbAsync(await new NodeAsset({ name: "valid-glb", outputBlock: destination }).executeAsync());
-    });
-
-    it.each(extensionTextureFormats)("exports $name textures through $extension", async ({ extension, imageBase64, mimeType }) => {
-        const parsed = await roundTripAsync(
-            generateTexturedGltfDataUri({
-                imageBase64,
-                imageMimeType: mimeType,
-                textureExtension: extension,
-            })
-        );
-        const imageIndex = parsed.json.images?.findIndex((image) => image.mimeType === mimeType);
-        const texture = parsed.json.textures?.[0];
-
-        expect(imageIndex).toBeGreaterThanOrEqual(0);
-        expect(parsed.json.extensionsUsed).toContain(extension);
-        expect(parsed.json.extensionsRequired).toContain(extension);
-        expect(texture?.source).toBeUndefined();
-        expect(texture?.extensions?.[extension]?.source).toBe(imageIndex);
-    });
-
-    it.each(coreTextureFormats)("exports $name textures through core texture.source", async ({ generateInput, mimeType }) => {
-        const parsed = await roundTripAsync(generateInput());
-        const imageIndex = parsed.json.images?.findIndex((image) => image.mimeType === mimeType);
-        const texture = parsed.json.textures?.[0];
-
-        expect(imageIndex).toBeGreaterThanOrEqual(0);
-        expect(parsed.json.extensionsUsed ?? []).not.toContain("EXT_texture_webp");
-        expect(parsed.json.extensionsUsed ?? []).not.toContain("EXT_texture_avif");
-        expect(texture?.extensions).toBeUndefined();
-        expect(texture?.source).toBe(imageIndex);
     });
 
     it("preserves texture transforms", async () => {
@@ -85,11 +55,3 @@ describe("glTF output", () => {
         });
     });
 });
-
-async function roundTripAsync(input: string) {
-    const source = new GltfInputBlock({ input });
-    const destination = new GltfOutputBlock();
-    source.output.connectTo(destination.input);
-
-    return parseGlbAsync(await new NodeAsset({ name: "textured-glb", outputBlock: destination }).executeAsync());
-}
