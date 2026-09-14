@@ -76,7 +76,7 @@ Blocks have input and output connection points. Some might also have additional,
 
 # Transforms
 
-Encoding blocks own their encoder resources and take and return a `Document`; there are no encoder connection points. Geometry compression follows glTF Transform's behavior without a specified execution boundary. The locked `Document` output types noted below are future work, not part of the initial implementation.
+Encoding blocks own their encoder resources and take and return a `Document`.
 
 - `EncodeKTX2Block`
     - Input: `Document`
