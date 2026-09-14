@@ -1,67 +1,3 @@
-# Blocks
-
-A block is a single piece of functionality. They are broadly categorized as follows:
-
-1. Inputs: data. User supplies the value; then, graph-managed data flows out.
-2. Transforms: functions. Data is managed by graph in both directions, in and out.
-3. Outputs: data. Graph-managed data in, user-facing data out.
-
-Blocks have input and output ports. Some might also have additional, optional input ports.
-
-# Block registry
-
-# Inputs
-
-Named by noun.
-
-- `FbxInputBlock`
-    - Input: `string` which is a URL (HTTPS or data) that points to an FBX file.
-    - Output: output (BabylonScene)
-    - Resources: Babylon FBX loader
-    - Behavior: Uses the Babylon scene loader to load an FBX using NullEngine. The FBX loader implementation loads on demand.
-- `GltfInputBlock`
-    - Input: `string` which is a URL (HTTPS or data) that points to a glTF or GLB.
-    - Output: output (BabylonScene)
-    - Resources: Babylon glTF loader
-    - Behavior: Uses the Babylon scene loader to load a glTF using NullEngine. The glTF 2 loader and each built-in extension implementation load on demand.
-- `ObjInputBlock`
-    - Input: `string` which is a URL (HTTPS or data) that points to an OBJ file.
-    - Output: output (BabylonScene)
-    - Resources: Babylon OBJ loader
-    - Behavior: Uses the Babylon scene loader to load an OBJ using NullEngine. The OBJ loader implementation loads on demand. For HTTP(S) OBJ URLs, referenced MTL files and supported relative textures are fetched automatically and embedded before loading. Data-URI OBJ inputs must be self-contained; relative MTL or texture references require an HTTP(S) base URL.
-- `StlInputBlock`
-    - Input: `string` which is a URL (HTTPS or data) that points to an STL file.
-    - Output: output (BabylonScene)
-    - Resources: Babylon STL loader
-    - Behavior: Uses the Babylon scene loader to load an STL using NullEngine. The STL loader implementation loads on demand.
-- `DracoEncoderBlock`
-    - Input: none
-    - Output: output (GltfMeshCompressionOptions)
-    - Resources: Babylon default DracoEncoder, package-owned browser encoder assets, and a shared Node worker-thread pool
-    - Behavior: Lazily prepares Babylon's default Draco encoder and provides `{ meshCompressionMethod: "Draco" }` as the per-export glTF mesh compression options that enable it. Browser builds load the emitted encoder wrapper and WebAssembly from the application's own origin. Node uses an auto-releasing worker pool sized to half the available processors, with a minimum of one and maximum of four workers. Caller-customized Babylon default configuration is left unchanged. Connect its output to `GltfOutputBlock`'s `geometryCompressionOptions` port.
-
-Browser deployments must still permit blob workers and WebAssembly under their Content Security Policy, typically through `worker-src blob:` and `script-src 'wasm-unsafe-eval'` where the target browser requires them.
-
-# Transforms
-
-Named by verb.
-
-- `CompressTexturesBlock`
-    - Input: input (BabylonScene)
-    - Output: output (BabylonScene)
-    - Resources: `babylonpress-ktx2-encoder`
-    - Behavior: Applies BasisU compression to supported 2D image-backed Babylon `Texture` instances used by built-in PBR materials and by StandardMaterial diffuse, ambient, opacity, reflection, emissive, specular, bump, lightmap, and refraction slots, resulting in .ktx2 images. Shared source images are encoded once per color/normal semantic and reused while retaining each texture's transforms, UV selection, sampling, and metadata. Cube, render-target, dynamic, procedural, and other non-image texture types are left unchanged. Output serialization remains limited to the texture slots supported by the selected output format.
-
-# Outputs
-
-Named by noun.
-
-- `GltfOutputBlock`
-    - Inputs: input (BabylonScene), geometryCompressionOptions (GltfMeshCompressionOptions, optional)
-    - Output: `File` which is a GLB
-    - Resources: Babylon glTF exporter
-    - Behavior: Uses GLBExport to export the scene to GLB and passes through any supplied mesh compression options. If `geometryCompressionOptions` is not connected, the export remains uncompressed.
-
 # Example: Hello, pipeline!
 
 Connect a `GltfInputBlock` to a `GltfOutputBlock`, then execute the resulting `NodeAsset`.
@@ -110,10 +46,6 @@ const source = new GltfInputBlock({
 });
 const destination = new GltfOutputBlock();
 ```
-
-`GltfInputBlock` accepts a URL (HTTPS or data) pointing to either a glTF or GLB. You can supply a default value for this in the constructor, as shown above.
-
-`GltfOutputBlock` produces a `File`, which is a GLB.
 
 # Connecting blocks
 
