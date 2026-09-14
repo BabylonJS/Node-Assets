@@ -19,7 +19,6 @@ Connection points types, in general, come in two forms.
 
 - File: for format- or byte-level operations. Examples: platform I/O
 - Content: for content-level operations. Examples: removing vertices, updating texture pixels
-- Module: for opt-in operations. Examples: encoders
 
 ## Content
 
@@ -34,14 +33,6 @@ Runtime data is passed by reference.
 
 TBD
 
-## Module
-
-- `DracoEncoder`
-    - Runtime data: initialized `EncoderModule` (`draco3dgltf`)
-- `MeshoptEncoder`
-    - Runtime data: `MeshoptEncoder` (`meshoptimizer`)
-- `KTX2Encoder`
-
 # Blocks
 
 Blocks are broadly categorized as follows.
@@ -53,7 +44,6 @@ Blocks are broadly categorized as follows.
 Some other categories:
 
 - Files
-- Modules
 - Selectors
 - Transforms: N -> N
 - Transcoders: N -> U
@@ -83,39 +73,26 @@ Blocks have input and output connection points. Some might also have additional,
     - Output: `Document`
     - Resources: Babylon STL loader
     - Behavior: Uses the Babylon scene loader to load an STL using NullEngine, exports it as a GLB, then reimports the bytes as a `Document`.
-- `DracoEncoderBlock`
-    - Input: none
-    - Output: `DracoEncoder`
-    - Resources: `draco3dgltf`
-    - Behavior: Loads `draco3dgltf` and initializes its encoder module.
-- `MeshoptEncoderBlock`
-    - Input: none
-    - Output: `MeshoptEncoder`
-    - Resources: `MeshoptEncoder` (meshoptimizer)
-    - Behavior: Loads and prepares the Meshopt encoder.
-- `KTX2EncoderBlock`
-    - Input: none
-    - Output: `KTX2Encoder`
-    - Resources: `babylonpress-ktx2-encoder` (babylonpress-ktx2-encoder)
-    - Behavior: Loads and prepares the KTX2 encoder.
 
 # Transforms
 
-The locked `Document` output types noted below are future work, not part of the initial implementation.
+Encoding blocks own their encoder resources and take and return a `Document`; there are no encoder connection points. Geometry compression follows glTF Transform's behavior without a specified execution boundary. The locked `Document` output types noted below are future work, not part of the initial implementation.
 
-- `CompressTextureBlock`
-    - Inputs:
-        1. input: `Document`
-        2. encoder: `KTX2Encoder`
+- `EncodeKTX2Block`
+    - Input: `Document`
     - Output: `Document` (but in future should be type that locks images and/or textures)
-    - Resources: `babylonpress-ktx2-encoder` (babylonpress-ktx2-encoder)
-    - Behavior: Applies BasisU compression to all images in file.
-- `CompressGeometryBlock`
-    - Inputs:
-        1. input: `Document`
-        2. encoder: `DracoEncoder` | `MeshoptEncoder`
+    - Resources: `ktx2` (`babylonpress-ktx2-encoder/gltf-transform`); `sharp` (Node.js only)
+    - Behavior: Compresses textures to KTX2 using `ktx2`. The block supplies our own async `imageDecoder` in Node.js, backed by `sharp`, returning `{ width, height, data }` with RGBA pixels in a `Uint8Array`. In browsers, `imageDecoder` is `undefined`.
+- `EncodeDracoBlock`
+    - Input: `Document`
     - Output: `Document` (but in future should be type that locks geometry)
-    - Behavior: Uses glTF Transform's geometry compression behavior with the supplied encoder. The execution boundary is intentionally unspecified for now; it may be formalized later through a locked `Document` output type.
+    - Resources: initialized `EncoderModule` (`draco3dgltf`)
+    - Behavior: Uses glTF Transform's Draco compression behavior, loading and initializing the encoder internally.
+- `EncodeMeshoptBlock`
+    - Input: `Document`
+    - Output: `Document` (but in future should be type that locks geometry)
+    - Resources: `MeshoptEncoder` (`meshoptimizer`)
+    - Behavior: Uses glTF Transform's Meshopt compression behavior, loading and preparing the encoder internally.
 
 # Outputs
 
