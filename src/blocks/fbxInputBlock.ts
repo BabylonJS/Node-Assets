@@ -29,7 +29,11 @@ function registerFbxLoader(): void {
     RegisterSceneLoaderPlugin({
         ...FBXFileLoaderMetadata,
         createPlugin: async (options: SceneLoaderPluginOptions) => {
-            const { FBXFileLoader } = await import("@babylonjs/loaders/FBX/fbxFileLoader.pure.js");
+            const [{ RegisterStandardMaterial }, { FBXFileLoader }] = await Promise.all([
+                import("@babylonjs/core/Materials/standardMaterial.pure.js"),
+                import("@babylonjs/loaders/FBX/fbxFileLoader.pure.js"),
+            ]);
+            RegisterStandardMaterial();
             return new FBXFileLoader(options[FBXFileLoaderMetadata.name]);
         },
     } satisfies ISceneLoaderPluginFactory);
