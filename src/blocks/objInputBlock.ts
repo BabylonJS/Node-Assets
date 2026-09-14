@@ -4,6 +4,7 @@ import type { Scene as BabylonScene } from "@babylonjs/core/scene.js";
 import { BabylonSceneType } from "../connectionPoints/babylonScene";
 import { UrlType } from "../connectionPoints/url";
 import { createDataUri, fetchOrThrowAsync, loadSingleFileSceneWithPluginAsync } from "../helpers/loadSceneWithPlugin";
+import { registerObjLoader } from "../helpers/registerObjLoader";
 import { NullEngineResource } from "../resources/nullEngineResource";
 import { Block, type BlockOptions } from "./block";
 import { defineBlock } from "./blockDefinition";
@@ -18,10 +19,9 @@ const ObjInputBlockDefinition = /* @__PURE__ */ defineBlock({
         engine: NullEngineResource,
     },
     runAsync: async (url, _config, { engine }) => {
-        const pluginPromise = import("@babylonjs/loaders/OBJ/index.js");
         let textureAssets = new Map<string, TextureAsset>();
         let materialTokens = new Map<string, string>();
-        const scene = await loadSingleFileSceneWithPluginAsync(url, engine, () => pluginPromise, {
+        const scene = await loadSingleFileSceneWithPluginAsync(url, engine, registerObjLoader, {
             includeRootUrl: false,
             pluginExtension: ".obj",
             pluginOptions: {

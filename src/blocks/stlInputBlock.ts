@@ -1,5 +1,6 @@
 import { BabylonSceneType } from "../connectionPoints/babylonScene";
 import { UrlType } from "../connectionPoints/url";
+import { registerStlLoader } from "../helpers/registerStlLoader";
 import { NullEngineResource } from "../resources/nullEngineResource";
 import { Block, type BlockOptions } from "./block";
 import { defineBlock } from "./blockDefinition";
@@ -12,7 +13,7 @@ const StlInputBlockDefinition = /* @__PURE__ */ defineBlock({
     resources: {
         engine: NullEngineResource,
     },
-    runAsync: (url, _config, { engine }) => loadSingleFileSceneWithPluginAsync(url, engine, () => import("@babylonjs/loaders/STL/index.js"), { pluginExtension: ".stl" }),
+    runAsync: (url, _config, { engine }) => loadSingleFileSceneWithPluginAsync(url, engine, registerStlLoader, { pluginExtension: ".stl" }),
 });
 
 /** Loads an STL URL into a Babylon.js scene. */

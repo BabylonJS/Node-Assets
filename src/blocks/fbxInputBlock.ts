@@ -1,6 +1,7 @@
 import { BabylonSceneType } from "../connectionPoints/babylonScene";
 import { UrlType } from "../connectionPoints/url";
 import { NullEngineResource } from "../resources/nullEngineResource";
+import { registerFbxLoader } from "../helpers/registerFbxLoader";
 import { Block, type BlockOptions } from "./block";
 import { defineBlock } from "./blockDefinition";
 import { loadSingleFileSceneWithPluginAsync } from "../helpers/loadSceneWithPlugin";
@@ -12,7 +13,7 @@ const FbxInputBlockDefinition = /* @__PURE__ */ defineBlock({
     resources: {
         engine: NullEngineResource,
     },
-    runAsync: (url, _config, { engine }) => loadSingleFileSceneWithPluginAsync(url, engine, () => import("@babylonjs/loaders/FBX/index.js"), { pluginExtension: ".fbx" }),
+    runAsync: (url, _config, { engine }) => loadSingleFileSceneWithPluginAsync(url, engine, registerFbxLoader, { pluginExtension: ".fbx" }),
 });
 
 /** Loads an FBX URL into a Babylon.js scene. */
