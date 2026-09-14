@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { GltfOutputBlock, NodeAsset, NodeAssetContext, StlInputBlock } from "../../src/index";
 import { parseGlbAsync } from "../helpers/glb";
-import { generateStlData, generateStlDataUri } from "../helpers/stl";
+import { generateBinaryStlData, generateStlData, generateStlDataUri } from "../helpers/stl";
 
 describe("STL input", () => {
     it("loads generated STL data without relying on a URL extension", async () => {
@@ -12,16 +12,20 @@ describe("STL input", () => {
         expect(json.meshes?.[0]?.primitives).toHaveLength(1);
     });
 
-    it("loads an extensionless HTTP asset", async () => {
+    it.each([
+        { data: generateStlData(), format: "ASCII" },
+        { data: generateBinaryStlData(), format: "binary" },
+    ])("loads an extensionless HTTP $format asset", async ({ data }) => {
         vi.stubGlobal(
             "fetch",
-            vi.fn(() => Promise.resolve(new Response(generateStlData())))
+            vi.fn(() => Promise.resolve(new Response(typeof data === "string" ? data : new Uint8Array(data).buffer)))
         );
 
         try {
             const { json } = await parseGlbAsync(await roundTripAsync(new StlInputBlock({ input: "https://example.com/model" })));
 
             expect(json.meshes).toHaveLength(1);
+            expect(json.meshes?.[0]?.primitives).toHaveLength(1);
         } finally {
             vi.unstubAllGlobals();
         }
