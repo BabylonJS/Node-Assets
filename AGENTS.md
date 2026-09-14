@@ -9,7 +9,8 @@ Guidance for coding agents working in this repository.
 ## Getting started
 
 - Read [[CONTRIBUTING.md]] for setup and scripts.
-- Read [[docs/usage.md]] for intended behavior contracts.
+- Read [[docs/usage.md]] for user-facing behavior contracts.
+- Read [[docs/architecture/index.md]] for intended implementation details and more behavior contracts.
 
 ## Guidelines
 
