@@ -1,4 +1,6 @@
 import type { IDracoCodecConfiguration } from "@babylonjs/core/Meshes/Compression/dracoCodec.js";
+import wasmBinaryUrl from "@babylonjs/core/assets/Draco/draco_encoder.wasm?url&no-inline";
+import wasmWrapperUrl from "@babylonjs/core/assets/Draco/draco_encoder_wasm_wrapper.js?url&no-inline";
 
 import { createGltfMeshCompressionOptions, GltfMeshCompressionOptionsType, type GltfMeshCompressionOptions } from "../connectionPoints/gltfMeshCompressionOptions";
 import { Block, type BlockOptions } from "./block";
@@ -8,12 +10,9 @@ const DracoEncoderBlockDefinition = /* @__PURE__ */ defineSourceBlock({
     type: "input.draco-encoder",
     output: GltfMeshCompressionOptionsType,
     runAsync: async (): Promise<GltfMeshCompressionOptions> => {
-        const [{ DracoEncoder }, { RegisterKHR_draco_mesh_compression }] = await Promise.all([
-            import("@babylonjs/core/Meshes/Compression/dracoEncoder.js"),
-            import("@babylonjs/serializers/glTF/2.0/Extensions/KHR_draco_mesh_compression.pure.js"),
-        ]);
-        await prepareDefaultEncoderForNodeAsync(DracoEncoder);
-        RegisterKHR_draco_mesh_compression();
+        await import("@babylonjs/core/Meshes/Compression/dracoEncoder.js").then(async ({ DracoEncoder }) => {
+            await prepareDefaultEncoderAsync(DracoEncoder);
+        });
         return createGltfMeshCompressionOptions({ meshCompressionMethod: "Draco" });
     },
 });
@@ -30,75 +29,48 @@ interface DracoEncoderConstructor {
     ResetDefault(skipDispose?: boolean): void;
 }
 
-interface DracoEncoderGlobal {
-    DracoEncoderModule?: DracoEncoderModuleFactory;
-}
+let defaultEncoderPreparationPromise: Promise<IDracoCodecConfiguration> | undefined;
 
-type DracoEncoderModuleFactory = (configuration: { wasmBinary: ArrayBuffer }) => Promise<unknown>;
-
-let defaultEncoderPreparationPromise: Promise<void> | undefined;
-
-async function prepareDefaultEncoderForNodeAsync(DracoEncoder: DracoEncoderConstructor): Promise<void> {
-    if (!isNode() || !isBabylonDefaultConfiguration(DracoEncoder.DefaultConfiguration)) {
+async function prepareDefaultEncoderAsync(DracoEncoder: DracoEncoderConstructor): Promise<void> {
+    if (!isBabylonDefaultConfiguration(DracoEncoder.DefaultConfiguration)) {
         return;
     }
 
-    const preparationPromise = (defaultEncoderPreparationPromise ??= initializeDefaultEncoderForNodeAsync(DracoEncoder));
+    const preparationPromise = (defaultEncoderPreparationPromise ??= createDefaultEncoderConfigurationAsync());
+    let configuration: IDracoCodecConfiguration;
     try {
-        await preparationPromise;
-    } catch (error) {
+        configuration = await preparationPromise;
+    } finally {
         if (defaultEncoderPreparationPromise === preparationPromise) {
             defaultEncoderPreparationPromise = undefined;
         }
-        throw error;
     }
+
+    if (!isBabylonDefaultConfiguration(DracoEncoder.DefaultConfiguration)) {
+        return;
+    }
+    DracoEncoder.ResetDefault(true);
+    DracoEncoder.DefaultConfiguration = configuration;
 }
 
-async function initializeDefaultEncoderForNodeAsync(DracoEncoder: DracoEncoderConstructor): Promise<void> {
-    const [{ createRequire }, { readFile }, { dirname }, { pathToFileURL }] = await Promise.all([
-        import("node:module"),
-        import("node:fs/promises"),
-        import("node:path"),
-        import("node:url"),
-    ]);
-    const resolve = createRequire(import.meta.url).resolve;
-    const wrapperPath = resolve("@babylonjs/core/assets/Draco/draco_encoder_wasm_wrapper.js");
-    const wrapperUrl = pathToFileURL(wrapperPath).href;
-    const wasmBinaryPath = resolve("@babylonjs/core/assets/Draco/draco_encoder.wasm");
-    const [wasmFile] = await Promise.all([readFile(wasmBinaryPath), import(/* @vite-ignore */ wrapperUrl)]);
-    const moduleFactory = (globalThis as DracoEncoderGlobal).DracoEncoderModule;
-    if (typeof moduleFactory !== "function") {
-        throw new Error("The Babylon.js Draco encoder module did not load.");
+async function createDefaultEncoderConfigurationAsync(): Promise<IDracoCodecConfiguration> {
+    if (isNode()) {
+        const { createNodeDracoEncoderConfigurationAsync } = await import("../helpers/nodeDracoEncoder");
+        return await createNodeDracoEncoderConfigurationAsync();
     }
-
-    const wasmBinary = Uint8Array.from(wasmFile).buffer;
-    const module = await createNodeEncoderModuleAsync(moduleFactory, wasmBinary, dirname(wrapperPath));
-    DracoEncoder.ResetDefault(true);
-    DracoEncoder.DefaultConfiguration = {
-        jsModule: () => Promise.resolve(module),
-        numWorkers: 0,
-        wasmBinary,
-        wasmBinaryUrl: pathToFileURL(wasmBinaryPath).href,
-        wasmUrl: wrapperUrl,
+    return {
+        wasmBinaryUrl,
+        wasmUrl: wasmWrapperUrl,
     };
 }
 
-async function createNodeEncoderModuleAsync(moduleFactory: DracoEncoderModuleFactory, wasmBinary: ArrayBuffer, wrapperDirectory: string): Promise<unknown> {
-    const dirnameDescriptor = Object.getOwnPropertyDescriptor(globalThis, "__dirname");
-    Object.defineProperty(globalThis, "__dirname", { configurable: true, value: wrapperDirectory });
-    try {
-        return await moduleFactory({ wasmBinary });
-    } finally {
-        if (dirnameDescriptor) {
-            Object.defineProperty(globalThis, "__dirname", dirnameDescriptor);
-        } else {
-            Reflect.deleteProperty(globalThis, "__dirname");
-        }
-    }
-}
-
 function isNode(): boolean {
-    return typeof process === "object" && process.versions?.node !== undefined;
+    return (
+        typeof process === "object" &&
+        process.release?.name === "node" &&
+        process.versions?.node !== undefined &&
+        !(process.versions.electron !== undefined && typeof window === "object")
+    );
 }
 
 function isBabylonDefaultConfiguration(configuration: IDracoCodecConfiguration): boolean {

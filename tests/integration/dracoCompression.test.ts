@@ -1,10 +1,61 @@
-import { describe, expect, expectTypeOf, it } from "vitest";
+import { DracoEncoder } from "@babylonjs/core/Meshes/Compression/dracoEncoder.js";
+import { NullEngine } from "@babylonjs/core/Engines/nullEngine.js";
+import { Mesh } from "@babylonjs/core/Meshes/mesh.js";
+import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData.js";
+import { Scene } from "@babylonjs/core/scene.js";
+import { createHook } from "node:async_hooks";
+
+import { describe, expect, expectTypeOf, it, vi } from "vitest";
 
 import { DracoEncoderBlock, GltfInputBlock, GltfOutputBlock, NodeAsset, type GltfMeshCompressionOptions } from "../../src/index";
 import { parseGlbAsync } from "../helpers/glb";
 import { generateGltfDataUri } from "../helpers/gltf";
 
 describe("Draco compression", () => {
+    it("preserves a caller-customized default encoder configuration", async () => {
+        const originalConfiguration = DracoEncoder.DefaultConfiguration;
+        const customConfiguration = {
+            fallbackUrl: "https://example.test/custom-draco-encoder.js",
+            numWorkers: 1,
+        };
+        DracoEncoder.ResetDefault(true);
+        DracoEncoder.DefaultConfiguration = customConfiguration;
+
+        try {
+            await new NodeAsset({ name: "custom-draco-encoder", outputBlock: new DracoEncoderBlock() }).executeAsync();
+            expect(DracoEncoder.DefaultConfiguration).toBe(customConfiguration);
+        } finally {
+            DracoEncoder.ResetDefault(true);
+            DracoEncoder.DefaultConfiguration = originalConfiguration;
+        }
+    });
+
+    it("creates a worker thread for Node encoding", async () => {
+        const engine = new NullEngine();
+        const scene = new Scene(engine);
+        const mesh = new Mesh("draco-mesh", scene);
+        const vertexData = new VertexData();
+        vertexData.positions = [0, 0, 0, 1, 0, 0, 0, 1, 0];
+        vertexData.normals = [0, 0, 1, 0, 0, 1, 0, 0, 1];
+        vertexData.indices = [0, 1, 2];
+        vertexData.applyToMesh(mesh);
+        vi.stubGlobal("window", {});
+
+        try {
+            expect(await countWorkersAsync(async () => await Promise.resolve())).toBe(0);
+
+            const workerCount = await countWorkersAsync(async () => {
+                await new NodeAsset({ name: "node-draco-encoder", outputBlock: new DracoEncoderBlock() }).executeAsync();
+                await DracoEncoder.Default.encodeMeshAsync(mesh);
+            });
+            expect(workerCount).toBeGreaterThan(0);
+        } finally {
+            vi.unstubAllGlobals();
+            scene.dispose();
+            engine.dispose();
+        }
+    });
+
     it("leaves unconnected glTF output uncompressed", async () => {
         const source = new GltfInputBlock({ input: generateGltfDataUri() });
         const destination = new GltfOutputBlock();
@@ -63,3 +114,21 @@ describe("Draco compression", () => {
         expect(json.meshes?.[0]?.primitives[0]?.extensions?.KHR_draco_mesh_compression).toBeUndefined();
     });
 });
+
+async function countWorkersAsync(action: () => Promise<void>): Promise<number> {
+    const workers = new Set<number>();
+    const hook = createHook({
+        init: (asyncId, type) => {
+            if (type === "WORKER") {
+                workers.add(asyncId);
+            }
+        },
+    });
+    hook.enable();
+    try {
+        await action();
+    } finally {
+        hook.disable();
+    }
+    return workers.size;
+}
