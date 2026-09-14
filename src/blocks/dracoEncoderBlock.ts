@@ -10,14 +10,9 @@ const DracoEncoderBlockDefinition = /* @__PURE__ */ defineSourceBlock({
     type: "input.draco-encoder",
     output: GltfMeshCompressionOptionsType,
     runAsync: async (): Promise<GltfMeshCompressionOptions> => {
-        const encoderPreparationPromise = import("@babylonjs/core/Meshes/Compression/dracoEncoder.js").then(async ({ DracoEncoder }) => {
+        await import("@babylonjs/core/Meshes/Compression/dracoEncoder.js").then(async ({ DracoEncoder }) => {
             await prepareDefaultEncoderAsync(DracoEncoder);
         });
-        const [, { RegisterKHR_draco_mesh_compression }] = await Promise.all([
-            encoderPreparationPromise,
-            import("@babylonjs/serializers/glTF/2.0/Extensions/KHR_draco_mesh_compression.pure.js"),
-        ]);
-        RegisterKHR_draco_mesh_compression();
         return createGltfMeshCompressionOptions({ meshCompressionMethod: "Draco" });
     },
 });
