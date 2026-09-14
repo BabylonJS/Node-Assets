@@ -7,7 +7,7 @@ Nodes are referred to as **blocks** in code contexts and **nodes** in UI context
 Sink nodes, or terminal nodes, are **output blocks**.
 Edges are **connections**.
 End points of an edge are **connection points** in code contexts and **ports** in UI contexts.
-The payload carried along an edge is **runtime data**.
+The payload carried along an edge is **runtime data**: what a block processes.
 The type of payload accepted by an end points is defined by its **connection point type**.
 Edges can only be drawn between compatible **connection point types**.
 Inbound end points are block **inputs**.
@@ -35,7 +35,7 @@ Runtime data is passed by reference.
 
 # Resources
 
-Each pipeline execution owns a resource scope. Resources are created on demand and shared by blocks within that execution. Blocks borrow resources; the scope retains them until execution completes or fails, then performs any required cleanup and releases its references.
+Resources are reusable values owned by a pipeline execution's resource scope, such as a shared `PlatformIO` instance. They are created on demand and shared by blocks within that execution. Blocks borrow resources; the scope retains them until execution completes or fails, then performs any required cleanup and releases its references.
 
 # Blocks
 
@@ -54,14 +54,14 @@ Some other categories:
 
 Blocks have input and output connection points. Some might also have additional, optional input connection points.
 
-> Before diving into the block registry, a note on the resources listed: blocks using a `Document` connection point type are assumed to be have a `Document` (@gltf-transform/core) resource. Only additional resources are named below.
+> **Uses** lists a block's implementation dependencies: libraries, functions, modules, and instances. These may include execution-scoped resources.
 
 ## Inputs
 
 - `FbxInputBlock`
     - Input: `string` which is a URL (HTTPS or data) that points to an FBX file.
     - Output: `Document`
-    - Resources: Babylon FBX loader
+    - Uses: Babylon FBX loader
     - Behavior: Uses the Babylon scene loader to load an FBX using NullEngine, exports it as a GLB, then reimports the bytes as a `Document`.
 - `GltfInputBlock`
     - Input: `string` which is a URL (HTTPS or data) that points to a glTF or GLB.
@@ -70,12 +70,12 @@ Blocks have input and output connection points. Some might also have additional,
 - `ObjInputBlock`
     - Input: `string` which is a URL (HTTPS or data) that points to an OBJ file.
     - Output: `Document`
-    - Resources: Babylon OBJ loader
+    - Uses: Babylon OBJ loader
     - Behavior: Uses the Babylon scene loader to load an OBJ using NullEngine, exports it as a GLB, then reimports the bytes as a `Document`.
 - `StlInputBlock`
     - Input: `string` which is a URL (HTTPS or data) that points to an STL file.
     - Output: `Document`
-    - Resources: Babylon STL loader
+    - Uses: Babylon STL loader
     - Behavior: Uses the Babylon scene loader to load an STL using NullEngine, exports it as a GLB, then reimports the bytes as a `Document`.
 
 # Transforms
@@ -83,17 +83,17 @@ Blocks have input and output connection points. Some might also have additional,
 - `EncodeKTX2Block`
     - Input: `Document`
     - Output: `Document` (but in future should be type that locks images and/or textures)
-    - Resources: `ktx2` (`babylonpress-ktx2-encoder/gltf-transform`); `sharp` (Node.js only)
+    - Uses: `ktx2` (`babylonpress-ktx2-encoder/gltf-transform`); `sharp` (Node.js only)
     - Behavior: Compresses textures to KTX2 using `ktx2`, loading and preparing the encoder internally.
 - `EncodeDracoBlock`
     - Input: `Document`
     - Output: `Document` (but in future should be type that locks geometry)
-    - Resources: initialized `EncoderModule` (`draco3dgltf`)
+    - Uses: initialized `EncoderModule` (`draco3dgltf`)
     - Behavior: Uses glTF Transform's Draco compression behavior, loading and initializing the encoder internally.
 - `EncodeMeshoptBlock`
     - Input: `Document`
     - Output: `Document` (but in future should be type that locks geometry)
-    - Resources: `MeshoptEncoder` (`meshoptimizer`)
+    - Uses: `MeshoptEncoder` (`meshoptimizer`)
     - Behavior: Uses glTF Transform's Meshopt compression behavior, loading and preparing the encoder internally.
 
 # Outputs
