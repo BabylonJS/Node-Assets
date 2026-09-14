@@ -1,7 +1,7 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 
-import { Block } from "../../src/block/block";
-import { defineBlock, defineSourceBlock } from "../../src/block/blockDefinition";
+import { Block } from "../../src/blocks/block";
+import { defineBlock, defineSourceBlock } from "../../src/blocks/blockDefinition";
 import { NodeAsset, NodeAssetContext } from "../../src/index";
 import type { Resource } from "../../src/resources/resource";
 import { ScaleDefinition, NumberDefinition } from "../helpers/numberBlocks";

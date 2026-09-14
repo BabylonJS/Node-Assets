@@ -13,7 +13,7 @@ describe("compressed GLB pipeline", () => {
 
         source.output.connectTo(compressTextures.input);
         compressTextures.output.connectTo(destination.input);
-        dracoEncoder.output.connectTo(destination.geometryCompressor);
+        dracoEncoder.output.connectTo(destination.geometryCompressionOptions);
 
         const asset = new NodeAsset({ name: "gltf-roundtrip", outputBlock: destination });
         const result = await asset.executeAsync();

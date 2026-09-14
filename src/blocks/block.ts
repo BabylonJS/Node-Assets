@@ -1,4 +1,4 @@
-import type { ConnectionPointType, ConnectionPointValue } from "./connectionPointType";
+import type { ConnectionPointType, ConnectionPointValue } from "../connectionPoints/connectionPoint";
 import type { _AnyBlockDefinition, AuxiliaryInputDefinition, ConfigDefinition, ConfigValues } from "./blockDefinition";
 
 /** @internal */

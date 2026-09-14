@@ -1,8 +1,6 @@
-import type { DracoEncoder as BabylonDracoEncoder } from "@babylonjs/core/Meshes/Compression/dracoEncoder.js";
-
 import { describe, expect, expectTypeOf, it } from "vitest";
 
-import { DracoEncoderBlock, GltfInputBlock, GltfOutputBlock, NodeAsset } from "../../src/index";
+import { DracoEncoderBlock, GltfInputBlock, GltfOutputBlock, NodeAsset, type GltfMeshCompressionOptions } from "../../src/index";
 import { parseGlbAsync } from "../helpers/glb";
 import { generateGltfDataUri } from "../helpers/gltf";
 
@@ -25,7 +23,7 @@ describe("Draco compression", () => {
             const encoder = new DracoEncoderBlock();
             const destination = new GltfOutputBlock();
             source.output.connectTo(destination.input);
-            encoder.output.connectTo(destination.geometryCompressor);
+            encoder.output.connectTo(destination.geometryCompressionOptions);
             return new NodeAsset({ name: `draco-compressed-${name}-glb`, outputBlock: destination });
         });
 
@@ -37,12 +35,31 @@ describe("Draco compression", () => {
         }
     });
 
-    it("provides Babylon's default Draco encoder", async () => {
+    it("provides per-export glTF mesh compression options", async () => {
         const encoderBlock = new DracoEncoderBlock();
         const result = await new NodeAsset({ name: "draco-encoder", outputBlock: encoderBlock }).executeAsync();
-        const { DracoEncoder } = await import("@babylonjs/core/Meshes/Compression/dracoEncoder.js");
 
-        expectTypeOf(result).toEqualTypeOf<BabylonDracoEncoder>();
-        expect(result).toBe(DracoEncoder.Default);
+        expectTypeOf(result).toEqualTypeOf<GltfMeshCompressionOptions>();
+        expect(result).toEqual({ meshCompressionMethod: "Draco" });
+    });
+
+    it("leaves a later unconnected glTF output uncompressed", async () => {
+        const compressedSource = new GltfInputBlock({ input: generateGltfDataUri() });
+        const encoder = new DracoEncoderBlock();
+        const compressedDestination = new GltfOutputBlock();
+        compressedSource.output.connectTo(compressedDestination.input);
+        encoder.output.connectTo(compressedDestination.geometryCompressionOptions);
+
+        await new NodeAsset({ name: "draco-compressed-glb", outputBlock: compressedDestination }).executeAsync();
+
+        const uncompressedSource = new GltfInputBlock({ input: generateGltfDataUri() });
+        const uncompressedDestination = new GltfOutputBlock();
+        uncompressedSource.output.connectTo(uncompressedDestination.input);
+
+        const result = await new NodeAsset({ name: "uncompressed-glb", outputBlock: uncompressedDestination }).executeAsync();
+        const { json } = await parseGlbAsync(result);
+
+        expect(json.extensionsUsed ?? []).not.toContain("KHR_draco_mesh_compression");
+        expect(json.meshes?.[0]?.primitives[0]?.extensions?.KHR_draco_mesh_compression).toBeUndefined();
     });
 });

@@ -3,9 +3,9 @@ import type { Texture } from "@babylonjs/core/Materials/Textures/texture.js";
 
 import { describe, expect, it } from "vitest";
 
-import { Block } from "../../src/block/block";
-import { defineBlock } from "../../src/block/blockDefinition";
-import { BabylonSceneType } from "../../src/block/connectionPointType";
+import { Block } from "../../src/blocks/block";
+import { defineBlock } from "../../src/blocks/blockDefinition";
+import { BabylonSceneType } from "../../src/connectionPoints/babylonScene";
 import { GltfInputBlock, GltfOutputBlock, NodeAsset } from "../../src/index";
 import { parseGlbAsync } from "../helpers/glb";
 import { generateGltfDataUri, generateTexturedGltfDataUri } from "../helpers/gltf";

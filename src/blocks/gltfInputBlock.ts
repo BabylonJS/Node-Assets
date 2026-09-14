@@ -1,8 +1,9 @@
-import { Block, type BlockOptions } from "../block/block";
-import { defineBlock } from "../block/blockDefinition";
-import { BabylonSceneType, UrlType } from "../block/connectionPointType";
-import { NullEngineResource } from "../resources/nullEngineResource";
+import { BabylonSceneType } from "../connectionPoints/babylonScene";
+import { UrlType } from "../connectionPoints/url";
 import { fetchOrThrowAsync, isHttpUrl, loadSingleFileSceneWithPluginAsync, responseToDataUriAsync } from "../helpers/loadSceneWithPlugin";
+import { NullEngineResource } from "../resources/nullEngineResource";
+import { Block, type BlockOptions } from "./block";
+import { defineBlock } from "./blockDefinition";
 
 const GltfInputBlockDefinition = /* @__PURE__ */ defineBlock({
     type: "input.gltf",

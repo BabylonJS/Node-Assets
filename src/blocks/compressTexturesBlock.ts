@@ -4,9 +4,9 @@ import type { PBRMaterial } from "@babylonjs/core/Materials/PBR/pbrMaterial.js";
 import type { Scene as BabylonScene } from "@babylonjs/core/scene.js";
 import type sharpFactory from "sharp";
 
-import { Block } from "../block/block";
-import { defineBlock } from "../block/blockDefinition";
-import { BabylonSceneType } from "../block/connectionPointType";
+import { Block } from "./block";
+import { defineBlock } from "./blockDefinition";
+import { BabylonSceneType } from "../connectionPoints/babylonScene";
 
 type CompressTexturesBlockDefinition = ReturnType<typeof createCompressTexturesBlockDefinition>;
 
