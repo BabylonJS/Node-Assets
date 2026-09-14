@@ -82,7 +82,7 @@ Encoding blocks own their encoder resources and take and return a `Document`.
     - Input: `Document`
     - Output: `Document` (but in future should be type that locks images and/or textures)
     - Resources: `ktx2` (`babylonpress-ktx2-encoder/gltf-transform`); `sharp` (Node.js only)
-    - Behavior: Compresses textures to KTX2 using `ktx2`. The block supplies our own async `imageDecoder` in Node.js, backed by `sharp`, returning `{ width, height, data }` with RGBA pixels in a `Uint8Array`. In browsers, `imageDecoder` is `undefined`.
+    - Behavior: Compresses textures to KTX2 using `ktx2`, loading and preparing the encoder internally.
 - `EncodeDracoBlock`
     - Input: `Document`
     - Output: `Document` (but in future should be type that locks geometry)
