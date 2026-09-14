@@ -11,7 +11,7 @@ const FbxInputBlockDefinition = /* @__PURE__ */ defineBlock({
     resources: {
         engine: NullEngineResource,
     },
-    runAsync: (url, _config, { engine }) => loadSingleFileSceneWithPluginAsync(url, engine, ".fbx", () => import("@babylonjs/loaders/FBX/index.js")),
+    runAsync: (url, _config, { engine }) => loadSingleFileSceneWithPluginAsync(url, engine, () => import("@babylonjs/loaders/FBX/index.js"), { pluginExtension: ".fbx" }),
 });
 
 /** Loads an FBX URL into a Babylon.js scene. */

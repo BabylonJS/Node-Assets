@@ -4,24 +4,66 @@ import type { Scene } from "@babylonjs/core/scene.js";
 
 type SceneSource = string | ArrayBufferView;
 
+interface SceneLoadPreparation {
+    readonly source: SceneSource;
+    readonly pluginExtension?: string;
+    readonly pluginOptions?: LoadOptions["pluginOptions"];
+}
+
+type PrepareSceneLoadAsync = (response: Response, resolvedUrl: string, signal: AbortSignal) => Promise<SceneLoadPreparation>;
+
+interface SingleFileSceneLoadOptions {
+    readonly includeRootUrl?: boolean;
+    readonly pluginExtension?: string;
+    readonly pluginOptions?: LoadOptions["pluginOptions"];
+    readonly prepareSceneLoadAsync?: PrepareSceneLoadAsync;
+}
+
 export async function loadSceneWithPluginAsync(source: SceneSource, engine: AbstractEngine, loadPluginAsync: () => Promise<unknown>, options?: LoadOptions): Promise<Scene> {
     const [{ LoadSceneAsync }] = await Promise.all([import("@babylonjs/core/Loading/sceneLoader.js"), loadPluginAsync()]);
     return LoadSceneAsync(source, engine, options);
 }
 
-export async function loadSingleFileSceneWithPluginAsync(url: string, engine: AbstractEngine, pluginExtension: string, loadPluginAsync: () => Promise<unknown>): Promise<Scene> {
+export async function loadSingleFileSceneWithPluginAsync(
+    url: string,
+    engine: AbstractEngine,
+    loadPluginAsync: () => Promise<unknown>,
+    options: SingleFileSceneLoadOptions = {}
+): Promise<Scene> {
     if (!isHttpUrl(url)) {
-        return loadSceneWithPluginAsync(url, engine, loadPluginAsync, { pluginExtension });
+        if (options.pluginExtension === undefined && options.pluginOptions === undefined) {
+            return loadSceneWithPluginAsync(url, engine, loadPluginAsync);
+        }
+
+        return loadSceneWithPluginAsync(url, engine, loadPluginAsync, {
+            ...(options.pluginExtension === undefined ? {} : { pluginExtension: options.pluginExtension }),
+            ...(options.pluginOptions === undefined ? {} : { pluginOptions: options.pluginOptions }),
+        });
     }
 
     const abortController = new AbortController();
     try {
-        const fetched = await fetchAsDataUriWithUrlAsync(url, abortController.signal);
-        return await loadSceneWithPluginAsync(fetched.dataUri, engine, loadPluginAsync, {
-            rootUrl: new URL(".", fetched.url).href,
-            pluginExtension,
-            name: new URL(fetched.url).pathname.split("/").pop() ?? "",
-        });
+        const response = await fetchOrThrowAsync(url, abortController.signal);
+        const resolvedUrl = response.url || url;
+        const preparation =
+            options.prepareSceneLoadAsync === undefined
+                ? { source: await responseToDataUriAsync(response) }
+                : await options.prepareSceneLoadAsync(response, resolvedUrl, abortController.signal);
+        const loadOptions: LoadOptions = {
+            name: new URL(resolvedUrl).pathname.split("/").pop() ?? "",
+        };
+        if (options.includeRootUrl !== false) {
+            loadOptions.rootUrl = new URL(".", resolvedUrl).href;
+        }
+        const resolvedPluginExtension = preparation.pluginExtension ?? options.pluginExtension;
+        if (resolvedPluginExtension !== undefined) {
+            loadOptions.pluginExtension = resolvedPluginExtension;
+        }
+        const resolvedPluginOptions = preparation.pluginOptions ?? options.pluginOptions;
+        if (resolvedPluginOptions !== undefined) {
+            loadOptions.pluginOptions = resolvedPluginOptions;
+        }
+        return await loadSceneWithPluginAsync(preparation.source, engine, loadPluginAsync, loadOptions);
     } finally {
         abortController.abort();
     }
@@ -40,17 +82,6 @@ export async function fetchOrThrowAsync(url: string, signal: AbortSignal): Promi
     return response;
 }
 
-export async function fetchAsDataUriAsync(url: string, signal: AbortSignal): Promise<string> {
-    return (await fetchAsDataUriWithUrlAsync(url, signal)).dataUri;
-}
-
-export async function fetchAsDataUriWithUrlAsync(url: string, signal: AbortSignal): Promise<{ readonly dataUri: string; readonly url: string }> {
-    const response = await fetchOrThrowAsync(url, signal);
-    const contentType = response.headers.get("content-type")?.split(";", 1)[0] || "application/octet-stream";
-    const dataUri = createDataUri(new Uint8Array(await response.arrayBuffer()), contentType);
-    return { dataUri, url: response.url || url };
-}
-
 export function createDataUri(data: Uint8Array, contentType: string): string {
     return `data:${contentType};base64,${toBase64(data)}`;
 }
@@ -66,4 +97,10 @@ export function toBase64(data: Uint8Array): string {
         binary += String.fromCharCode(...data.subarray(offset, offset + chunkSize));
     }
     return btoa(binary);
+}
+
+export async function responseToDataUriAsync(response: Response): Promise<string> {
+    const contentType = response.headers.get("content-type")?.split(";", 1)[0] || "application/octet-stream";
+    const data = new Uint8Array(await response.arrayBuffer());
+    return createDataUri(data, contentType);
 }
