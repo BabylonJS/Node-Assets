@@ -23,7 +23,7 @@ Connection points types, in general, come in two forms.
 
 ## Content
 
-- `Babylon` (future; not part of the initial implementation)
+- `Babylon` (future)
     - Runtime data: `Scene` (@babylonjs/core)
 - `glTF`
     - Runtime data: `Document` (@gltf-transform/core)
