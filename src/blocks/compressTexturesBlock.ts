@@ -509,7 +509,6 @@ async function createCompressedTextureAsync(
             undefined,
             ".ktx2"
         );
-        texture.delayLoad();
     });
 
     copyTextureProperties(source, compressed);
