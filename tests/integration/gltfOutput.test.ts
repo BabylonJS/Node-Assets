@@ -8,43 +8,9 @@ import { defineBlock } from "../../src/blocks/blockDefinition";
 import { BabylonSceneType } from "../../src/connectionPoints/babylonScene";
 import { GltfInputBlock, GltfOutputBlock, NodeAsset } from "../../src/index";
 import { parseGlbAsync } from "../helpers/glb";
-import { generateGltfDataUri, generateTexturedGltfDataUri } from "../helpers/gltf";
+import { coreTextureFormats, extensionTextureFormats, generateGltfDataUri, generateTexturedGltfDataUri } from "../helpers/gltf";
 
 describe("glTF output", () => {
-    const extensionTextureFormats = [
-        {
-            extension: "EXT_texture_webp" as const,
-            imageBase64: "UklGRjwAAABXRUJQVlA4IDAAAADQAQCdASoCAAIAAgA0JaACdLoB+AADsAD+8MQL/yC5YXXI1/8gP+QH/ID/+PIAAAA=",
-            mimeType: "image/webp",
-            name: "WebP",
-        },
-        {
-            extension: "EXT_texture_avif" as const,
-            imageBase64:
-                "AAAAHGZ0eXBhdmlmAAAAAG1pZjFhdmlmbWlhZgAAANZtZXRhAAAAAAAAACFoZGxyAAAAAAAAAABwaWN0AAAAAAAAAAAAAAAAAAAAAA5waXRtAAAAAAABAAAAImlsb2MAAAAAREAAAQABAAAAAAD6AAEAAAAAAAAAHwAAACNpaW5mAAAAAAABAAAAFWluZmUCAAAAAAEAAGF2MDEAAAAAVmlwcnAAAAA4aXBjbwAAAAxhdjFDgUBsAAAAABRpc3BlAAAAAAAAAAIAAAACAAAAEHBpeGkAAAAAAwwMDAAAABZpcG1hAAAAAAAAAAEAAQOBAgMAAAAnbWRhdBIACghYADY0BDQbhDIRGAAOOOOEAACwE1TtMKTrDPw=",
-            mimeType: "image/avif",
-            name: "AVIF",
-        },
-    ];
-
-    const coreTextureFormats = [
-        {
-            generateInput: () => generateTexturedGltfDataUri(),
-            mimeType: "image/png",
-            name: "PNG",
-        },
-        {
-            generateInput: () =>
-                generateTexturedGltfDataUri({
-                    imageBase64:
-                        "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEBAQEBAgGBgUGCQgKCgkICQkKDA8MCgsOCwkJDRENDg8QEBEQCgwSExIQEw8QEBD/2wBDAQMDAwQDBAgEBAgQCwkLEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBD/wAARCAACAAIDAREAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACP/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAVAQEBAAAAAAAAAAAAAAAAAAAHCf/EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwEAAhEDEQA/ADoDFU3/2Q==",
-                    imageMimeType: "image/jpeg",
-                }),
-            mimeType: "image/jpeg",
-            name: "JPEG",
-        },
-    ];
-
     it("exports a valid GLB", async () => {
         const source = new GltfInputBlock({ input: generateGltfDataUri() });
         const destination = new GltfOutputBlock();
