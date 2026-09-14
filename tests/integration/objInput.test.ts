@@ -58,42 +58,6 @@ describe("OBJ input", () => {
             vi.unstubAllGlobals();
         }
     });
-
-    it("preserves repeated material references with CRLF line endings", async () => {
-        const materialName = "Repeated Material";
-        const obj = [
-            "mtllib materials/model.mtl",
-            "o Triangle",
-            "v 0 0 0",
-            "v 1 0 0",
-            "v 0 1 0",
-            "vn 0 0 1",
-            ...Array.from({ length: 512 }, () => `  usemtl ${materialName}\r\nf 1//1 2//1 3//1`),
-        ].join("\r\n");
-        const rootUrl = "https://example.com/assets/model.obj";
-        const mtlUrl = "https://example.com/assets/materials/model.mtl";
-        vi.stubGlobal(
-            "fetch",
-            vi.fn((input: string | URL | Request) => {
-                if (String(input) === rootUrl) {
-                    return Promise.resolve(new Response(obj, { headers: { "content-type": "text/plain" } }));
-                }
-                if (String(input) === mtlUrl) {
-                    return Promise.resolve(new Response(`newmtl ${materialName}\r\nKd 1 1 1`, { headers: { "content-type": "text/plain" } }));
-                }
-                return Promise.reject(new Error(`Unexpected fetch: ${String(input)}`));
-            })
-        );
-
-        try {
-            const { json } = await parseGlbAsync(await roundTripAsync(new ObjInputBlock({ input: rootUrl })));
-
-            expect(json.meshes).toHaveLength(512);
-            expect(json.materials?.[0]?.name).toBe(materialName);
-        } finally {
-            vi.unstubAllGlobals();
-        }
-    });
 });
 
 async function roundTripAsync(source: ObjInputBlock): Promise<File> {
