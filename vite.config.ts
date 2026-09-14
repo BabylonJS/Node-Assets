@@ -12,7 +12,7 @@ export default defineConfig({
             fileName: () => "index.js",
         },
         rollupOptions: {
-            // Runtime modules stay external; package-owned browser Draco assets are emitted.
+            // Runtime dependencies stay external; explicitly bundled assets are emitted.
             external: (id) => !isBundledDracoAsset(id) && (/^@babylonjs\//.test(id) || /^babylonpress-ktx2-encoder$/.test(id) || /^node:/.test(id) || /^sharp$/.test(id)),
         },
     },
