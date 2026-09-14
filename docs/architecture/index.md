@@ -23,10 +23,12 @@ Connection points types, in general, come in two forms.
 
 ## Content
 
-- `Babylon`
+- `Babylon` (future; not part of the initial implementation)
     - Runtime data: `Scene` (@babylonjs/core)
 - `glTF`
     - Runtime data: `Document` (@gltf-transform/core)
+
+Within an execution, connections pass a `Document` by reference. Branches share the same mutable document; no implicit cloning occurs.
 
 ## File
 
@@ -35,6 +37,7 @@ TBD
 ## Module
 
 - `DracoEncoder`
+    - Runtime data: initialized `EncoderModule` (`draco3dgltf`)
 - `MeshoptEncoder`
 - `KTX2Encoder`
 
@@ -82,8 +85,8 @@ Blocks have input and output connection points. Some might also have additional,
 - `DracoEncoderBlock`
     - Input: none
     - Output: `DracoEncoder`
-    - Resources: `DracoEncoder` (@babylonjs/core) (alternative: draco3d (`draco3dgltf`))
-    - Behavior: Loads and prepares the Draco encoder.
+    - Resources: `draco3dgltf`
+    - Behavior: Loads `draco3dgltf` and initializes its encoder module.
 - `MeshoptEncoderBlock`
     - Input: none
     - Output: `MeshoptEncoder`
@@ -97,6 +100,8 @@ Blocks have input and output connection points. Some might also have additional,
 
 # Transforms
 
+The locked `Document` output types noted below are future work, not part of the initial implementation.
+
 - `CompressTextureBlock`
     - Inputs:
         1. input: `Document`
@@ -109,7 +114,7 @@ Blocks have input and output connection points. Some might also have additional,
         1. input: `Document`
         2. encoder: `DracoEncoder` | `MeshoptEncoder`
     - Output: `Document` (but in future should be type that locks geometry)
-    - Behavior: Applies supplied compression module to all geometry in file.
+    - Behavior: Uses glTF Transform's geometry compression behavior with the supplied encoder. The execution boundary is intentionally unspecified for now; it may be formalized later through a locked `Document` output type.
 
 # Outputs
 
