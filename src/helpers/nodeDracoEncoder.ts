@@ -1,5 +1,6 @@
 import type { IDracoCodecConfiguration } from "@babylonjs/core/Meshes/Compression/dracoCodec.js";
 import { initializeWebWorker } from "@babylonjs/core/Meshes/Compression/dracoCompressionWorker.js";
+import { WorkerPool } from "@babylonjs/core/Misc/workerPool.js";
 
 import { AutoReleaseNodeWorkerPool, createNodeWorkerAdapter, getDefaultNodeWorkerCount } from "./autoReleaseNodeWorkerPool";
 
@@ -56,8 +57,20 @@ export async function createNodeDracoEncoderConfigurationAsync(): Promise<IDraco
     return {
         wasmBinaryUrl,
         wasmUrl: wrapperUrl,
-        workerPool,
+        workerPool: new NonDisposingWorkerPool(workerPool),
     };
+}
+
+class NonDisposingWorkerPool extends WorkerPool {
+    public constructor(private readonly _workerPool: WorkerPool) {
+        super([]);
+    }
+
+    public override push(action: (worker: Worker, onComplete: () => void) => void): void {
+        this._workerPool.push(action);
+    }
+
+    public override dispose(): void {}
 }
 
 const NodeDracoWorkerBootstrap = String.raw`

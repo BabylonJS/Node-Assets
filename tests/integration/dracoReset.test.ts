@@ -7,7 +7,7 @@ import { parseGlbAsync } from "../helpers/glb";
 import { generateGltfDataUri } from "../helpers/gltf";
 
 describe("Draco default reset", () => {
-    it("creates a fresh shared runtime after Babylon restores its stock configuration", async () => {
+    it("keeps the shared runtime usable and replaces it after restoring stock configuration", async () => {
         const stockConfiguration = DracoEncoder.DefaultConfiguration;
 
         try {
@@ -17,11 +17,7 @@ describe("Draco default reset", () => {
 
             void DracoEncoder.Default;
             DracoEncoder.ResetDefault();
-            DracoEncoder.DefaultConfiguration = stockConfiguration;
-
-            await new NodeAsset({ name: "second-draco-runtime", outputBlock: new DracoEncoderBlock() }).executeAsync();
-            expect(DracoEncoder.DefaultConfiguration.workerPool).toBeDefined();
-            expect(DracoEncoder.DefaultConfiguration.workerPool).not.toBe(firstWorkerPool);
+            expect(DracoEncoder.DefaultConfiguration.workerPool).toBe(firstWorkerPool);
 
             const source = new GltfInputBlock({ input: generateGltfDataUri() });
             const encoder = new DracoEncoderBlock();
@@ -31,6 +27,12 @@ describe("Draco default reset", () => {
 
             const { json } = await parseGlbAsync(await new NodeAsset({ name: "reset-draco-runtime", outputBlock: destination }).executeAsync());
             expect(json.extensionsUsed).toContain("KHR_draco_mesh_compression");
+
+            DracoEncoder.ResetDefault();
+            DracoEncoder.DefaultConfiguration = stockConfiguration;
+            await new NodeAsset({ name: "second-draco-runtime", outputBlock: new DracoEncoderBlock() }).executeAsync();
+            expect(DracoEncoder.DefaultConfiguration.workerPool).toBeDefined();
+            expect(DracoEncoder.DefaultConfiguration.workerPool).not.toBe(firstWorkerPool);
         } finally {
             DracoEncoder.ResetDefault();
             DracoEncoder.DefaultConfiguration = stockConfiguration;

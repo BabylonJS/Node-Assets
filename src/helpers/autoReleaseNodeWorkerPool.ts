@@ -26,6 +26,7 @@ interface WorkerSlot {
 }
 
 const IdleWorkerLifetimeMilliseconds = 1000;
+const QueueCompactionThreshold = 1024;
 const WorkerFailureRetryDelayMilliseconds = 100;
 
 export function getDefaultNodeWorkerCount(availableParallelism: number): number {
@@ -37,7 +38,7 @@ export function createNodeWorkerAdapter(worker: NodeWorker, onFatalError: (error
 }
 
 export class AutoReleaseNodeWorkerPool extends WorkerPool {
-    private readonly _actions: Array<WorkerAction | undefined> = [];
+    private _actions: Array<WorkerAction | undefined> = [];
     private readonly _slots: WorkerSlot[] = [];
     private _actionHead = 0;
     private _disposed = false;
@@ -284,6 +285,10 @@ export class AutoReleaseNodeWorkerPool extends WorkerPool {
         const action = this._actions[this._actionHead];
         this._actions[this._actionHead] = undefined;
         this._actionHead++;
+        if (this._actionHead >= QueueCompactionThreshold && this._actionHead * 2 >= this._actions.length) {
+            this._actions = this._actions.slice(this._actionHead);
+            this._actionHead = 0;
+        }
         return action;
     }
 
