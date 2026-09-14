@@ -20,9 +20,8 @@ pnpm build
 pnpm lint          # ESLint, Prettier, and typecheck
 pnpm lint:fix      # ESLint autofix
 pnpm format        # Write Prettier formatting
-pnpm test          # Run unit, integration, and bundle test suites
-pnpm test:bundle   # Run the bundle test suite
-pnpm test:watch    # Run unit and integration tests in watch mode
+pnpm test          # Run Vitest
+pnpm test:watch    # Run Vitest in watch mode
 pnpm build         # Build with Vite and emit dist/
 pnpm typedocs      # Generate the TypeDoc API reference
 ```
