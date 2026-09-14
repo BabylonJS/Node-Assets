@@ -3,6 +3,7 @@ import { NullEngine } from "@babylonjs/core/Engines/nullEngine.js";
 import { Mesh } from "@babylonjs/core/Meshes/mesh.js";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData.js";
 import { Scene } from "@babylonjs/core/scene.js";
+import { createHook } from "node:async_hooks";
 
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
 
@@ -29,7 +30,7 @@ describe("Draco compression", () => {
         }
     });
 
-    it("keeps warmed-up Node encoding off the event loop", async () => {
+    it("creates a worker thread for Node encoding", async () => {
         const engine = new NullEngine();
         const scene = new Scene(engine);
         const mesh = new Mesh("draco-mesh", scene);
@@ -41,15 +42,13 @@ describe("Draco compression", () => {
         vi.stubGlobal("window", {});
 
         try {
-            await new NodeAsset({ name: "node-draco-encoder", outputBlock: new DracoEncoderBlock() }).executeAsync();
-            await DracoEncoder.Default.encodeMeshAsync(mesh);
+            expect(await countWorkersAsync(async () => await Promise.resolve())).toBe(0);
 
-            const firstResult = await Promise.race([
-                DracoEncoder.Default.encodeMeshAsync(mesh).then(() => "encoded" as const),
-                new Promise<"event-loop">((resolve) => setImmediate(() => resolve("event-loop"))),
-            ]);
-
-            expect(firstResult).toBe("event-loop");
+            const workerCount = await countWorkersAsync(async () => {
+                await new NodeAsset({ name: "node-draco-encoder", outputBlock: new DracoEncoderBlock() }).executeAsync();
+                await DracoEncoder.Default.encodeMeshAsync(mesh);
+            });
+            expect(workerCount).toBeGreaterThan(0);
         } finally {
             vi.unstubAllGlobals();
             scene.dispose();
@@ -115,3 +114,21 @@ describe("Draco compression", () => {
         expect(json.meshes?.[0]?.primitives[0]?.extensions?.KHR_draco_mesh_compression).toBeUndefined();
     });
 });
+
+async function countWorkersAsync(action: () => Promise<void>): Promise<number> {
+    const workers = new Set<number>();
+    const hook = createHook({
+        init: (asyncId, type) => {
+            if (type === "WORKER") {
+                workers.add(asyncId);
+            }
+        },
+    });
+    hook.enable();
+    try {
+        await action();
+    } finally {
+        hook.disable();
+    }
+    return workers.size;
+}
