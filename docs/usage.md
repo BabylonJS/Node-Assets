@@ -50,7 +50,7 @@ Named by verb.
     - Input: input (BabylonScene)
     - Output: output (BabylonScene)
     - Resources: `babylonpress-ktx2-encoder`
-    - Behavior: Applies BasisU compression to each image, resulting in .ktx2 images
+    - Behavior: Applies BasisU compression to supported 2D image-backed Babylon `Texture` instances used by built-in PBR materials and by StandardMaterial diffuse, ambient, opacity, reflection, emissive, specular, bump, lightmap, and refraction slots, resulting in .ktx2 images. Shared source images are encoded once per color/normal semantic and reused while retaining each texture's transforms, UV selection, sampling, and metadata. Cube, render-target, dynamic, procedural, and other non-image texture types are left unchanged. Output serialization remains limited to the texture slots supported by the selected output format.
 
 # Outputs
 
