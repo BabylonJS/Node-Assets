@@ -46,21 +46,22 @@ describe("glTF input", () => {
         await Promise.all(outputs.map(parseGlbAsync));
     });
 
-    it("keeps a terminal scene usable until explicit cleanup", async () => {
+    it("keeps a terminal scene usable until the scene is disposed", async () => {
         const source = new GltfInputBlock({ input: generateGltfDataUri() });
         const asset = new NodeAsset({ name: "terminal-gltf-scene", outputBlock: source });
         const scene = await asset.executeAsync();
+        const engine = scene.getEngine();
 
-        try {
-            expect(scene.isDisposed).toBe(false);
-            expect(scene.meshes.length).toBeGreaterThan(0);
-            scene.activeCamera = new FreeCamera("test-camera", Vector3.Zero(), scene);
-            scene.render();
-        } finally {
-            await asset.disposeSceneAsync(scene);
-        }
+        expect(scene.isDisposed).toBe(false);
+        expect(scene.meshes.length).toBeGreaterThan(0);
+        scene.activeCamera = new FreeCamera("test-camera", Vector3.Zero(), scene);
+        scene.render();
+
+        scene.dispose();
+        await asset.disposeSceneAsync(scene);
 
         expect(scene.isDisposed).toBe(true);
+        expect(engine.isDisposed).toBe(true);
     });
 
     it.each([

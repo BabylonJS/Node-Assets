@@ -150,7 +150,7 @@ const asset = new NodeAsset({
 
 ## Disposing terminal scenes
 
-When `executeAsync` returns a Babylon.js `Scene` created with an engine owned by that execution, the scene and the execution's entire resource scope remain alive until you explicitly release them with `disposeSceneAsync`. Use `try`/`finally` so cleanup also runs when later work fails.
+When `executeAsync` returns a Babylon.js `Scene` created with an engine owned by that execution, the scene and the execution's entire resource scope remain alive until you dispose the scene. Use `try`/`finally` so cleanup also runs when later work fails.
 
 ```ts
 const source = new GltfInputBlock({
@@ -165,13 +165,15 @@ const scene = await asset.executeAsync();
 try {
     console.log(scene.meshes.length);
 } finally {
-    await asset.disposeSceneAsync(scene);
+    scene.dispose();
 }
 ```
 
 The whole execution scope is retained because block resource definitions do not describe which dependencies escape through scene outputs. Multiple scenes using the execution-owned engine therefore remain valid until the terminal scene is released, then are disposed together with the engine and the rest of the scope.
 
-`disposeSceneAsync` is safe to call more than once. It does nothing for unregistered scenes, including scenes backed by caller-owned engines. Calling `NodeAsset.dispose()` prevents new executions but does not release scenes returned by earlier or currently running executions; those scenes remain individually releasable afterward. Calling Babylon's synchronous `Scene.dispose()` does not replace `await asset.disposeSceneAsync(scene)` because execution resources may require asynchronous cleanup.
+`Scene.dispose()` starts cleanup of the retained execution resources. Most callers do not need any additional API. If a caller must wait for asynchronous resource cleanup or handle a cleanup failure, it can call `await asset.disposeSceneAsync(scene)` after disposing the scene. The method is safe to call more than once and does nothing for unregistered scenes, including scenes backed by caller-owned engines.
+
+Calling `NodeAsset.dispose()` prevents new executions but does not release scenes returned by earlier or currently running executions. Those scenes remain independently releasable through their own `dispose()` methods.
 
 Executions that return `File`, numeric, or other non-scene values continue to clean up their resources before `executeAsync` resolves.
 
@@ -243,7 +245,7 @@ const firstResult = await asset.executeAsync(first);
 const secondResult = await asset.executeAsync(second);
 ```
 
-Each NodeAsset execution owns its resources. Non-scene executions clean them up before returning, while execution-owned terminal scenes retain their scope until `disposeSceneAsync`.
+Each NodeAsset execution owns its resources. Non-scene executions clean them up before returning, while execution-owned terminal scenes retain their scope until the scene is disposed.
 
 ## Method 2: Batched
 

@@ -273,8 +273,12 @@ describe("NodeAsset", () => {
         expect(events).toEqual(["create", "run", "dispose"]);
     });
 
-    it("retains all resources for an execution-owned terminal scene", async () => {
+    it("disposes retained resources when an execution-owned terminal scene is disposed", async () => {
         const events: string[] = [];
+        let notifyCleanupStarted: (() => void) | undefined;
+        const cleanupStarted = new Promise<void>((resolve) => {
+            notifyCleanupStarted = resolve;
+        });
         const engineResource = {
             name: "owned-engine",
             create: () => new NullEngine(),
@@ -288,6 +292,7 @@ describe("NodeAsset", () => {
             create: () => ({}),
             dispose: () => {
                 events.push("dispose retained resource");
+                notifyCleanupStarted?.();
             },
         } satisfies Resource<object>;
         const definition = defineSourceBlock({
@@ -305,10 +310,13 @@ describe("NodeAsset", () => {
         expect(scene.isDisposed).toBe(false);
         expect(siblingScene.isDisposed).toBe(false);
 
+        scene.dispose();
+        await cleanupStarted;
+
+        expect(scene.isDisposed).toBe(true);
         await asset.disposeSceneAsync(scene);
 
         expect(events).toEqual(["dispose retained resource", "dispose engine"]);
-        expect(scene.isDisposed).toBe(true);
         expect(siblingScene.isDisposed).toBe(true);
     });
 
@@ -365,6 +373,7 @@ describe("NodeAsset", () => {
         const asset = new NodeAsset({ name: "independent-scenes", outputBlock: new Block(definition) });
 
         const [firstScene, secondScene] = await Promise.all([asset.executeAsync(), asset.executeAsync()]);
+        firstScene.dispose();
         await asset.disposeSceneAsync(firstScene);
 
         expect(firstScene.isDisposed).toBe(true);
@@ -380,7 +389,7 @@ describe("NodeAsset", () => {
         expect(cleanupCount).toBe(2);
     });
 
-    it("publishes the cleanup promise before resource disposal can reenter", async () => {
+    it("publishes the cleanup promise before scene disposal can reenter", async () => {
         let cleanupCount = 0;
         const engineResource = {
             name: "reentrant-engine",
@@ -407,6 +416,7 @@ describe("NodeAsset", () => {
             }
         });
 
+        scene.dispose();
         const cleanup = asset.disposeSceneAsync(scene);
         await cleanup;
 
@@ -445,6 +455,7 @@ describe("NodeAsset", () => {
         const asset = new NodeAsset({ name: "failing-cleanup-scene", outputBlock: new Block(definition) });
         const scene = await asset.executeAsync();
 
+        scene.dispose();
         const firstCleanup = asset.disposeSceneAsync(scene);
         const secondCleanup = asset.disposeSceneAsync(scene);
         const error = await firstCleanup.catch((caught: unknown) => caught);
@@ -486,6 +497,7 @@ describe("NodeAsset", () => {
         const scene = await execution;
         expect(scene.isDisposed).toBe(false);
 
+        scene.dispose();
         await asset.disposeSceneAsync(scene);
         expect(scene.isDisposed).toBe(true);
     });

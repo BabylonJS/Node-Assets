@@ -64,12 +64,19 @@ export class NodeAsset<TOutput extends AnyBlock> {
         return executeAsync(this.#nodes, this.#consumerCounts, this.outputBlock, inputs).then(({ result, retainedScope }) => {
             if (retainedScope !== undefined && BabylonSceneType.is(result)) {
                 this.#ownedSceneScopes.set(result, retainedScope);
+                if (result.isDisposed) {
+                    void retainedScope.disposeAsync();
+                } else {
+                    result.onDisposeObservable.addOnce(() => {
+                        void retainedScope.disposeAsync();
+                    });
+                }
             }
             return result;
         });
     }
 
-    /** Releases resources retained for a terminal scene returned by this node asset. */
+    /** Waits for resources retained by a terminal scene to finish disposing. */
     public disposeSceneAsync(scene: BabylonScene): Promise<void> {
         return this.#ownedSceneScopes.get(scene)?.disposeAsync() ?? Promise.resolve();
     }
