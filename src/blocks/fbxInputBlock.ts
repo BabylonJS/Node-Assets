@@ -1,7 +1,9 @@
+import { RegisterSceneLoaderPlugin, type ISceneLoaderPluginFactory, type SceneLoaderPluginOptions } from "@babylonjs/core/Loading/sceneLoader.js";
+import { FBXFileLoaderMetadata } from "@babylonjs/loaders/FBX/fbxFileLoader.metadata.js";
+
 import { BabylonSceneType } from "../connectionPoints/babylonScene";
 import { UrlType } from "../connectionPoints/url";
 import { NullEngineResource } from "../resources/nullEngineResource";
-import { registerFbxLoader } from "../helpers/registerFbxLoader";
 import { Block, type BlockOptions } from "./block";
 import { defineBlock } from "./blockDefinition";
 import { loadSingleFileSceneWithPluginAsync } from "../helpers/loadSceneWithPlugin";
@@ -21,4 +23,14 @@ export class FbxInputBlock extends Block<typeof FbxInputBlockDefinition> {
     public constructor(options?: BlockOptions<typeof FbxInputBlockDefinition>) {
         super(FbxInputBlockDefinition, options);
     }
+}
+
+function registerFbxLoader(): void {
+    RegisterSceneLoaderPlugin({
+        ...FBXFileLoaderMetadata,
+        createPlugin: async (options: SceneLoaderPluginOptions) => {
+            const { FBXFileLoader } = await import("@babylonjs/loaders/FBX/fbxFileLoader.pure.js");
+            return new FBXFileLoader(options[FBXFileLoaderMetadata.name]);
+        },
+    } satisfies ISceneLoaderPluginFactory);
 }
