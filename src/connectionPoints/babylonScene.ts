@@ -17,5 +17,7 @@ export const BabylonSceneType = /* @__PURE__ */ defineConnectionPointType<Babylo
         typeof value.onDisposeObservable === "object" &&
         value.onDisposeObservable !== null &&
         "addOnce" in value.onDisposeObservable &&
-        typeof value.onDisposeObservable.addOnce === "function"
+        typeof value.onDisposeObservable.addOnce === "function" &&
+        "makeObserverTopPriority" in value.onDisposeObservable &&
+        typeof value.onDisposeObservable.makeObserverTopPriority === "function"
 );

@@ -36,12 +36,17 @@ interface ExecutionResult<TResult> {
     readonly retainedScope: ResourceScope | undefined;
 }
 
+interface SceneScopeCleanup {
+    readonly completion: Promise<void>;
+    start(): void;
+}
+
 /** An executable asset pipeline, captured from a terminal output block. */
 export class NodeAsset<TOutput extends AnyBlock> {
     readonly #blocks: ReadonlySet<AnyBlock>;
     readonly #consumerCounts: ReadonlyMap<AnyBlock, number>;
     readonly #nodes: readonly NodeRecord[];
-    readonly #ownedSceneScopes = new WeakMap<BabylonScene, ResourceScope>();
+    readonly #ownedSceneCleanups = new WeakMap<BabylonScene, SceneScopeCleanup>();
     #isDisposed = false;
 
     public readonly name: string;
@@ -63,13 +68,15 @@ export class NodeAsset<TOutput extends AnyBlock> {
         const inputs = context?._snapshot() ?? new Map<AnyBlock, unknown>();
         return executeAsync(this.#nodes, this.#consumerCounts, this.outputBlock, inputs).then(({ result, retainedScope }) => {
             if (retainedScope !== undefined && BabylonSceneType.is(result)) {
-                this.#ownedSceneScopes.set(result, retainedScope);
+                const cleanup = createSceneScopeCleanup(retainedScope);
+                this.#ownedSceneCleanups.set(result, cleanup);
                 if (result.isDisposed) {
-                    void retainedScope.disposeAsync();
+                    cleanup.start();
                 } else {
-                    result.onDisposeObservable.addOnce(() => {
-                        void retainedScope.disposeAsync();
+                    const observer = result.onDisposeObservable.addOnce(() => {
+                        cleanup.start();
                     });
+                    result.onDisposeObservable.makeObserverTopPriority(observer);
                 }
             }
             return result;
@@ -78,7 +85,7 @@ export class NodeAsset<TOutput extends AnyBlock> {
 
     /** Waits for resources retained by a terminal scene to finish disposing. */
     public disposeSceneAsync(scene: BabylonScene): Promise<void> {
-        return this.#ownedSceneScopes.get(scene)?.disposeAsync() ?? Promise.resolve();
+        return this.#ownedSceneCleanups.get(scene)?.completion ?? Promise.resolve();
     }
 
     /** Prevents new executions without releasing retained terminal-scene resources. */
@@ -90,6 +97,28 @@ export class NodeAsset<TOutput extends AnyBlock> {
     public _hasBlock(block: AnyBlock): boolean {
         return this.#blocks.has(block);
     }
+}
+
+function createSceneScopeCleanup(scope: ResourceScope): SceneScopeCleanup {
+    let isStarted = false;
+    let resolveCompletion!: () => void;
+    let rejectCompletion!: (error: unknown) => void;
+    const completion = new Promise<void>((resolve, reject) => {
+        resolveCompletion = resolve;
+        rejectCompletion = reject;
+    });
+    void completion.catch(() => undefined);
+
+    return Object.freeze({
+        completion,
+        start: () => {
+            if (isStarted) {
+                return;
+            }
+            isStarted = true;
+            void scope.disposeAsync().then(resolveCompletion, rejectCompletion);
+        },
+    });
 }
 
 function captureTopology(outputBlock: AnyBlock): readonly NodeRecord[] {

@@ -299,7 +299,13 @@ describe("NodeAsset", () => {
             type: "owned-scene",
             output: BabylonSceneType,
             resources: { engine: engineResource, retainedResource },
-            run: (_config, { engine }) => new Scene(engine),
+            run: (_config, { engine }) => {
+                const scene = new Scene(engine);
+                scene.onDisposeObservable.add((_disposedScene, eventState) => {
+                    eventState.skipNextObservers = true;
+                });
+                return scene;
+            },
         });
         const asset = new NodeAsset({ name: "owned-scene", outputBlock: new Block(definition) });
 
@@ -381,6 +387,12 @@ describe("NodeAsset", () => {
         expect(cleanupCount).toBe(1);
 
         const firstCleanup = asset.disposeSceneAsync(secondScene);
+        await Promise.resolve();
+
+        expect(secondScene.isDisposed).toBe(false);
+        expect(cleanupCount).toBe(1);
+
+        secondScene.dispose();
         const secondCleanup = asset.disposeSceneAsync(secondScene);
 
         expect(firstCleanup).toBe(secondCleanup);
