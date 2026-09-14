@@ -28,7 +28,7 @@ Connection points types, in general, come in two forms.
 - `glTF`
     - Runtime data: `Document` (@gltf-transform/core)
 
-Within an execution, connections pass a `Document` by reference. Branches share the same mutable document; no implicit cloning occurs.
+Runtime data is passed by reference.
 
 ## File
 
