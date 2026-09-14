@@ -30,7 +30,7 @@ describe("texture compression", () => {
         expectKtx2Image(parsed);
     });
 
-    it("compresses OBJ StandardMaterial textures", async () => {
+    it("compresses StandardMaterial color and normal textures", async () => {
         const rootUrl = "https://example.com/assets/model.obj";
         const mtlUrl = "https://example.com/assets/materials/model.mtl";
         const textureUrl = "https://example.com/assets/materials/textures/diffuse.png";
@@ -57,7 +57,7 @@ describe("texture compression", () => {
             source.output.connectTo(compressTextures.input);
             compressTextures.output.connectTo(destination.input);
 
-            const parsed = await parseGlbAsync(await new NodeAsset({ name: "obj-texture-compression", outputBlock: destination }).executeAsync());
+            const parsed = await parseGlbAsync(await new NodeAsset({ name: "standard-material-texture-compression", outputBlock: destination }).executeAsync());
             const material = parsed.json.materials?.[0];
             const baseColorTexture = material?.pbrMetallicRoughness?.baseColorTexture;
             const baseColorImageIndex = getTextureImageIndex(parsed, baseColorTexture?.index);
@@ -77,7 +77,7 @@ describe("texture compression", () => {
         }
     });
 
-    it("compresses a loader-created StandardMaterial diffuse texture", async () => {
+    it("compresses an extensionless StandardMaterial texture", async () => {
         const rootUrl = "https://example.com/model";
         const redirectedRootUrl = "https://cdn.example.com/assets/scene.fbx";
         const textureUrl = "https://cdn.example.com/assets/textures/diffuse";
@@ -103,7 +103,7 @@ describe("texture compression", () => {
             source.output.connectTo(compressTextures.input);
             compressTextures.output.connectTo(destination.input);
 
-            const parsed = await parseGlbAsync(await new NodeAsset({ name: "fbx-texture-compression", outputBlock: destination }).executeAsync());
+            const parsed = await parseGlbAsync(await new NodeAsset({ name: "extensionless-texture-compression", outputBlock: destination }).executeAsync());
             const baseColorTexture = parsed.json.materials?.[0]?.pbrMetallicRoughness?.baseColorTexture;
             const imageIndex = getTextureImageIndex(parsed, baseColorTexture?.index);
 
