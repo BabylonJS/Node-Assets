@@ -1,4 +1,6 @@
 import type { IDracoCodecConfiguration } from "@babylonjs/core/Meshes/Compression/dracoCodec.js";
+import wasmBinaryUrl from "@babylonjs/core/assets/Draco/draco_encoder.wasm?url&no-inline";
+import wasmWrapperUrl from "@babylonjs/core/assets/Draco/draco_encoder_wasm_wrapper.js?url&no-inline";
 
 import { createGltfMeshCompressionOptions, GltfMeshCompressionOptionsType, type GltfMeshCompressionOptions } from "../connectionPoints/gltfMeshCompressionOptions";
 import { Block, type BlockOptions } from "./block";
@@ -61,8 +63,6 @@ async function createDefaultEncoderConfigurationAsync(): Promise<IDracoCodecConf
         const { createNodeDracoEncoderConfigurationAsync } = await import("../helpers/nodeDracoWorkerPool");
         return await createNodeDracoEncoderConfigurationAsync();
     }
-    const { getDracoEncoderAssetUrls } = await import("../helpers/dracoEncoderAssets");
-    const { wasmBinaryUrl, wasmWrapperUrl } = getDracoEncoderAssetUrls();
     return {
         wasmBinaryUrl,
         wasmUrl: wasmWrapperUrl,

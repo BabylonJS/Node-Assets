@@ -30,20 +30,20 @@ describe("Draco browser bundle", () => {
         }
 
         const fileNames = result.output.map((output) => output.fileName);
-        const assetModulePath = normalizeModuleId(fileURLToPath(new URL("../../src/helpers/dracoEncoderAssets.ts", import.meta.url)));
-        const assetChunk = result.output.find(
+        const blockModulePath = normalizeModuleId(fileURLToPath(new URL("../../src/blocks/dracoEncoderBlock.ts", import.meta.url)));
+        const blockChunk = result.output.find(
             (output): output is Extract<(typeof result.output)[number], { type: "chunk" }> =>
                 output.type === "chunk" &&
                 Object.keys((output as BundleChunk).modules)
                     .map(normalizeModuleId)
-                    .includes(assetModulePath)
+                    .includes(blockModulePath)
         );
 
         expect(fileNames.some((fileName) => /draco_encoder.*\.wasm$/.test(fileName))).toBe(true);
         expect(fileNames.some((fileName) => /draco_encoder_wasm_wrapper.*\.js$/.test(fileName))).toBe(true);
-        expect(assetChunk?.code).toMatch(/["']\/assets\/draco_encoder.*\.wasm["']/);
-        expect(assetChunk?.code).toMatch(/["']\/assets\/draco_encoder_wasm_wrapper.*\.js["']/);
-        expect(assetChunk?.code).not.toContain("cdn.babylonjs.com");
+        expect(blockChunk?.code).toMatch(/["']\/assets\/draco_encoder.*\.wasm["']/);
+        expect(blockChunk?.code).toMatch(/["']\/assets\/draco_encoder_wasm_wrapper.*\.js["']/);
+        expect(blockChunk?.code).toMatch(/return\s*\{\s*wasmBinaryUrl,\s*wasmUrl:\s*wasmWrapperUrl\s*\}/);
     }, 60_000);
 });
 
