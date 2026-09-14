@@ -8,7 +8,6 @@ interface AcquiredResource {
 export class ResourceScope {
     readonly #instances = new Map<AnyResource, Promise<unknown>>();
     readonly #acquired: AcquiredResource[] = [];
-    #disposal: Promise<void> | undefined;
     #isDisposed = false;
 
     public async resolveAllAsync<TResources extends ResourceDependencies>(resources: TResources): Promise<ResourceValues<TResources>> {
@@ -19,19 +18,12 @@ export class ResourceScope {
         return Object.freeze(values) as ResourceValues<TResources>;
     }
 
-    public hasAcquiredValue(value: unknown): boolean {
-        return this.#acquired.some((acquired) => acquired.value === value);
-    }
-
-    public disposeAsync(): Promise<void> {
-        if (this.#disposal === undefined) {
-            this.#isDisposed = true;
-            this.#disposal = Promise.resolve().then(() => this.#disposeAsync());
+    public async disposeAsync(): Promise<void> {
+        if (this.#isDisposed) {
+            return;
         }
-        return this.#disposal;
-    }
+        this.#isDisposed = true;
 
-    async #disposeAsync(): Promise<void> {
         const errors: unknown[] = [];
         for (let index = this.#acquired.length - 1; index >= 0; index--) {
             const acquired = this.#acquired[index];
