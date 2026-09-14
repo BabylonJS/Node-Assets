@@ -76,8 +76,6 @@ Blocks have input and output connection points. Some might also have additional,
 
 # Transforms
 
-Encoding blocks own their encoder resources and take and return a `Document`.
-
 - `EncodeKTX2Block`
     - Input: `Document`
     - Output: `Document` (but in future should be type that locks images and/or textures)
