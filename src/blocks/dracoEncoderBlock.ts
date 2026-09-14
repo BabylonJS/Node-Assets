@@ -55,7 +55,7 @@ async function prepareDefaultEncoderAsync(DracoEncoder: DracoEncoderConstructor)
 
 async function createDefaultEncoderConfigurationAsync(): Promise<IDracoCodecConfiguration> {
     if (isNode()) {
-        const { createNodeDracoEncoderConfigurationAsync } = await import("../helpers/nodeDracoWorkerPool");
+        const { createNodeDracoEncoderConfigurationAsync } = await import("../helpers/nodeDracoEncoder");
         return await createNodeDracoEncoderConfigurationAsync();
     }
     return {

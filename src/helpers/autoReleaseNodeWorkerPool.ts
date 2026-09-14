@@ -1,22 +1,18 @@
-import type { IDracoCodecConfiguration } from "@babylonjs/core/Meshes/Compression/dracoCodec.js";
-import { initializeWebWorker } from "@babylonjs/core/Meshes/Compression/dracoCompressionWorker.js";
 import { WorkerPool } from "@babylonjs/core/Misc/workerPool.js";
 import type { Worker as NodeWorker } from "node:worker_threads";
 
 type WorkerAction = (worker: Worker, onComplete: () => void) => void;
 
-/** @internal */
-export interface _ManagedNodeWorker extends Worker {
+export interface ManagedNodeWorker extends Worker {
     readonly dead: boolean;
     dispatchFailure(error: unknown): void;
     ref(): void;
     unref(): void;
 }
 
-/** @internal */
-export interface _NodeWorkerInitialization {
+export interface NodeWorkerInitialization {
     readonly ready: Promise<void>;
-    readonly worker: _ManagedNodeWorker;
+    readonly worker: ManagedNodeWorker;
 }
 
 interface WorkerSlot {
@@ -24,78 +20,23 @@ interface WorkerSlot {
     actionStarted: boolean;
     busy: boolean;
     idleTimer?: ReturnType<typeof setTimeout>;
-    initialization?: Promise<_ManagedNodeWorker>;
+    initialization?: Promise<ManagedNodeWorker>;
     removed: boolean;
-    worker?: _ManagedNodeWorker;
+    worker?: ManagedNodeWorker;
 }
 
 const IdleWorkerLifetimeMilliseconds = 1000;
 const WorkerFailureRetryDelayMilliseconds = 100;
 
-export async function createNodeDracoEncoderConfigurationAsync(): Promise<IDracoCodecConfiguration> {
-    const [{ createRequire }, { readFile }, { dirname }, { availableParallelism }, { pathToFileURL }, { Worker: NodeWorkerConstructor }] = await Promise.all([
-        import("node:module"),
-        import("node:fs/promises"),
-        import("node:path"),
-        import("node:os"),
-        import("node:url"),
-        import("node:worker_threads"),
-    ]);
-    const resolve = createRequire(import.meta.url).resolve;
-    const wrapperPath = resolve("@babylonjs/core/assets/Draco/draco_encoder_wasm_wrapper.js");
-    const wasmBinaryPath = resolve("@babylonjs/core/assets/Draco/draco_encoder.wasm");
-    const workerModulePath = resolve("@babylonjs/core/Meshes/Compression/dracoCompressionWorker.js");
-    const wrapperUrl = pathToFileURL(wrapperPath).href;
-    const wasmBinaryUrl = pathToFileURL(wasmBinaryPath).href;
-    const workerModuleUrl = pathToFileURL(workerModulePath).href;
-    let wasmBinaryPromise: Promise<ArrayBuffer> | undefined;
-
-    const loadWasmBinaryAsync = async (): Promise<ArrayBuffer> => {
-        const loadPromise = (wasmBinaryPromise ??= readFile(wasmBinaryPath).then((file) => Uint8Array.from(file).buffer));
-        try {
-            return await loadPromise;
-        } catch (error) {
-            if (wasmBinaryPromise === loadPromise) {
-                wasmBinaryPromise = undefined;
-            }
-            throw error;
-        }
-    };
-
-    const workerPool = new _NodeDracoWorkerPool(_getNodeWorkerCount(availableParallelism()), (onFatalError) => {
-        const nodeWorker = new NodeWorkerConstructor(new URL(`data:text/javascript,${encodeURIComponent(NodeDracoWorkerBootstrap)}`), {
-            workerData: {
-                wrapperDirectory: dirname(wrapperPath),
-                wrapperUrl,
-                workerModuleUrl,
-            },
-        });
-        const worker = new NodeWorkerAdapter(nodeWorker, onFatalError);
-        const ready = loadWasmBinaryAsync()
-            .then(async (wasmBinary) => {
-                await initializeWebWorker(worker, wasmBinary);
-            })
-            .catch((error: unknown) => {
-                worker.terminate();
-                throw error;
-            });
-        return { ready, worker };
-    });
-
-    return {
-        wasmBinaryUrl,
-        wasmUrl: wrapperUrl,
-        workerPool,
-    };
-}
-
-/** @internal */
-export function _getNodeWorkerCount(availableParallelism: number): number {
+export function getDefaultNodeWorkerCount(availableParallelism: number): number {
     return Math.min(Math.max(Math.floor(availableParallelism * 0.5), 1), 4);
 }
 
-/** @internal */
-export class _NodeDracoWorkerPool extends WorkerPool {
+export function createNodeWorkerAdapter(worker: NodeWorker, onFatalError: (error: unknown) => void): ManagedNodeWorker {
+    return new NodeWorkerAdapter(worker, onFatalError);
+}
+
+export class AutoReleaseNodeWorkerPool extends WorkerPool {
     private readonly _actions: Array<WorkerAction | undefined> = [];
     private readonly _slots: WorkerSlot[] = [];
     private _actionHead = 0;
@@ -105,7 +46,7 @@ export class _NodeDracoWorkerPool extends WorkerPool {
 
     public constructor(
         private readonly _maxWorkers: number,
-        private readonly _createWorker: (onFatalError: (error: unknown) => void) => _NodeWorkerInitialization,
+        private readonly _createWorker: (onFatalError: (error: unknown) => void) => NodeWorkerInitialization,
         private readonly _idleWorkerLifetimeMilliseconds = IdleWorkerLifetimeMilliseconds,
         private readonly _failureRetryDelayMilliseconds = WorkerFailureRetryDelayMilliseconds
     ) {
@@ -114,7 +55,7 @@ export class _NodeDracoWorkerPool extends WorkerPool {
 
     public override push(action: WorkerAction): void {
         if (this._disposed) {
-            throw new Error("The Node Draco worker pool is disposed.");
+            throw new Error("The Node worker pool is disposed.");
         }
         if (this._failure !== undefined) {
             this._runFailedAction(action, this._failure);
@@ -134,7 +75,7 @@ export class _NodeDracoWorkerPool extends WorkerPool {
             delete this._failureTimer;
         }
         delete this._failure;
-        const error = new Error("The Node Draco worker pool was disposed.");
+        const error = new Error("The Node worker pool was disposed.");
         for (let action = this._takeNextAction(); action !== undefined; action = this._takeNextAction()) {
             this._runFailedAction(action, error);
         }
@@ -205,7 +146,7 @@ export class _NodeDracoWorkerPool extends WorkerPool {
 
         const initialization = slot.initialization;
         if (initialization === undefined) {
-            throw new Error("The Node Draco worker slot was not initialized.");
+            throw new Error("The Node worker slot was not initialized.");
         }
         void initialization.then(
             (worker) => {
@@ -216,7 +157,7 @@ export class _NodeDracoWorkerPool extends WorkerPool {
                         delete slot.action;
                         this._runFailedAction(
                             pendingAction,
-                            this._disposed ? new Error("The Node Draco worker pool was disposed.") : new Error("The Node Draco worker stopped during initialization.")
+                            this._disposed ? new Error("The Node worker pool was disposed.") : new Error("The Node worker stopped during initialization.")
                         );
                     }
                     return;
@@ -356,7 +297,7 @@ export class _NodeDracoWorkerPool extends WorkerPool {
     }
 }
 
-class NodeWorkerAdapter extends EventTarget implements _ManagedNodeWorker {
+class NodeWorkerAdapter extends EventTarget implements ManagedNodeWorker {
     public onerror: ((this: AbstractWorker, event: ErrorEvent) => unknown) | null = null;
     public onmessage: ((this: Worker, event: MessageEvent) => unknown) | null = null;
     public onmessageerror: ((this: Worker, event: MessageEvent) => unknown) | null = null;
@@ -382,19 +323,19 @@ class NodeWorkerAdapter extends EventTarget implements _ManagedNodeWorker {
         _worker.once("error", (error) => this._handleFatalError(error, true));
         _worker.once("exit", (code) => {
             if (!this._terminating && !this.dead) {
-                this._handleFatalError(new Error(`The Node Draco worker exited unexpectedly with code ${code}.`), false);
+                this._handleFatalError(new Error(`The Node worker exited unexpectedly with code ${code}.`), false);
             }
         });
     }
 
     public postMessage(message: unknown, transferOrOptions?: Transferable[] | StructuredSerializeOptions): void {
         if (this.dead) {
-            throw new Error("The Node Draco worker is not running.");
+            throw new Error("The Node worker is not running.");
         }
         if (Array.isArray(transferOrOptions)) {
             const transferList = transferOrOptions.map((item) => {
                 if (!(item instanceof ArrayBuffer)) {
-                    throw new TypeError("The Node Draco worker only supports ArrayBuffer transfers.");
+                    throw new TypeError("The Node worker only supports ArrayBuffer transfers.");
                 }
                 return item;
             });
@@ -478,46 +419,3 @@ class NodeWorkerErrorEvent extends Event implements ErrorEvent {
         this.message = error instanceof Error ? error.message : String(error);
     }
 }
-
-const NodeDracoWorkerBootstrap = String.raw`
-import { parentPort, workerData } from "node:worker_threads";
-
-if (parentPort === null) {
-    throw new Error("The Draco encoder worker requires a parent port.");
-}
-
-globalThis.self = globalThis;
-globalThis.onmessage = undefined;
-globalThis.postMessage = (value, transferList) => parentPort.postMessage(value, transferList);
-Object.defineProperty(globalThis, "__dirname", {
-    configurable: true,
-    value: workerData.wrapperDirectory,
-});
-
-const pendingMessages = [];
-parentPort.on("message", (data) => {
-    if (typeof globalThis.onmessage === "function") {
-        globalThis.onmessage({ data });
-    } else {
-        pendingMessages.push(data);
-    }
-});
-
-void (async () => {
-    const wrapperModule = await import(workerData.wrapperUrl);
-    globalThis.DracoEncoderModule =
-        wrapperModule.default ?? wrapperModule.DracoEncoderModule ?? globalThis.DracoEncoderModule;
-    if (typeof globalThis.DracoEncoderModule !== "function") {
-        throw new Error("The Babylon.js Draco encoder module did not load.");
-    }
-    const { EncoderWorkerFunction } = await import(workerData.workerModuleUrl);
-    EncoderWorkerFunction();
-    for (const data of pendingMessages.splice(0)) {
-        globalThis.onmessage({ data });
-    }
-})().catch((error) => {
-    queueMicrotask(() => {
-        throw error;
-    });
-});
-`;

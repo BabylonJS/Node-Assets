@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { _getNodeWorkerCount, _NodeDracoWorkerPool, type _ManagedNodeWorker } from "../../src/helpers/nodeDracoWorkerPool";
+import { AutoReleaseNodeWorkerPool, getDefaultNodeWorkerCount, type ManagedNodeWorker } from "../../src/helpers/autoReleaseNodeWorkerPool";
 
-describe("Node Draco worker pool", () => {
+describe("AutoReleaseNodeWorkerPool", () => {
     it("uses half the available processors with bounds", () => {
-        expect(_getNodeWorkerCount(1)).toBe(1);
-        expect(_getNodeWorkerCount(6)).toBe(3);
-        expect(_getNodeWorkerCount(12)).toBe(4);
+        expect(getDefaultNodeWorkerCount(1)).toBe(1);
+        expect(getDefaultNodeWorkerCount(6)).toBe(3);
+        expect(getDefaultNodeWorkerCount(12)).toBe(4);
     });
 
     it("rejects a worker startup failure and retries with a new worker later", async () => {
         let attempts = 0;
-        const pool = new _NodeDracoWorkerPool(
+        const pool = new AutoReleaseNodeWorkerPool(
             1,
             (onFatalError) => {
                 attempts++;
@@ -36,7 +36,7 @@ describe("Node Draco worker pool", () => {
 
     it("rejects delayed actions after startup failure without repeated worker churn", async () => {
         let attempts = 0;
-        const pool = new _NodeDracoWorkerPool(
+        const pool = new AutoReleaseNodeWorkerPool(
             1,
             (onFatalError) => {
                 attempts++;
@@ -58,7 +58,7 @@ describe("Node Draco worker pool", () => {
 
     it("rejects a queued batch after one startup failure without repeated worker churn", async () => {
         let attempts = 0;
-        const pool = new _NodeDracoWorkerPool(1, (onFatalError) => {
+        const pool = new AutoReleaseNodeWorkerPool(1, (onFatalError) => {
             attempts++;
             const worker = new FakeWorker(onFatalError, () => undefined);
             return { ready: Promise.reject(new Error("startup failed")), worker };
@@ -73,7 +73,7 @@ describe("Node Draco worker pool", () => {
 
     it("recovers after an active worker exits unexpectedly", async () => {
         let attempts = 0;
-        const pool = new _NodeDracoWorkerPool(
+        const pool = new AutoReleaseNodeWorkerPool(
             1,
             (onFatalError) => {
                 attempts++;
@@ -98,7 +98,7 @@ describe("Node Draco worker pool", () => {
     it("settles synchronous post failures without discarding a healthy worker", async () => {
         let posts = 0;
         let attempts = 0;
-        const pool = new _NodeDracoWorkerPool(1, (onFatalError) => {
+        const pool = new AutoReleaseNodeWorkerPool(1, (onFatalError) => {
             attempts++;
             const worker = new FakeWorker(onFatalError, (currentWorker) => {
                 posts++;
@@ -119,7 +119,7 @@ describe("Node Draco worker pool", () => {
     it("does not create more workers than its bound", async () => {
         let workersCreated = 0;
         const completions: Array<() => void> = [];
-        const pool = new _NodeDracoWorkerPool(2, (onFatalError) => {
+        const pool = new AutoReleaseNodeWorkerPool(2, (onFatalError) => {
             workersCreated++;
             const worker = new FakeWorker(onFatalError, () => undefined);
             return { ready: Promise.resolve(), worker };
@@ -139,7 +139,7 @@ describe("Node Draco worker pool", () => {
 
     it("unrefs idle workers, terminates them, and creates replacements later", async () => {
         const workers: FakeWorker[] = [];
-        const pool = new _NodeDracoWorkerPool(
+        const pool = new AutoReleaseNodeWorkerPool(
             1,
             (onFatalError) => {
                 const worker = new FakeWorker(onFatalError, (currentWorker) => currentWorker.sendSuccess());
@@ -162,7 +162,7 @@ describe("Node Draco worker pool", () => {
     it("settles an action and terminates its worker when disposed during initialization", async () => {
         let resolveInitialization: (() => void) | undefined;
         let worker: FakeWorker | undefined;
-        const pool = new _NodeDracoWorkerPool(1, (onFatalError) => {
+        const pool = new AutoReleaseNodeWorkerPool(1, (onFatalError) => {
             worker = new FakeWorker(onFatalError, (currentWorker) => currentWorker.sendSuccess());
             return {
                 ready: new Promise((resolve) => {
@@ -181,7 +181,7 @@ describe("Node Draco worker pool", () => {
     });
 });
 
-function runActionAsync(pool: _NodeDracoWorkerPool): Promise<unknown> {
+function runActionAsync(pool: AutoReleaseNodeWorkerPool): Promise<unknown> {
     return new Promise((resolve, reject) => {
         pool.push((worker, onComplete) => {
             const cleanup = () => {
@@ -215,7 +215,7 @@ async function waitForAsync(predicate: () => boolean): Promise<void> {
     throw new Error("Timed out waiting for the worker pool.");
 }
 
-class FakeWorker extends EventTarget implements _ManagedNodeWorker {
+class FakeWorker extends EventTarget implements ManagedNodeWorker {
     public onerror: ((this: AbstractWorker, event: ErrorEvent) => unknown) | null = null;
     public onmessage: ((this: Worker, event: MessageEvent) => unknown) | null = null;
     public onmessageerror: ((this: Worker, event: MessageEvent) => unknown) | null = null;
