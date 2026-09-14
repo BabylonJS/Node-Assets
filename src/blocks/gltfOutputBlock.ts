@@ -1,4 +1,3 @@
-import type { BaseTexture } from "@babylonjs/core/Materials/Textures/baseTexture.js";
 import type { Scene as BabylonScene } from "@babylonjs/core/scene.js";
 
 import { BabylonSceneType } from "../connectionPoints/babylonScene";
@@ -31,11 +30,7 @@ export class GltfOutputBlock extends Block<typeof GltfOutputBlockDefinition> {
 }
 
 async function serializeGlbAsync(scene: BabylonScene, geometryCompressionOptions: GltfMeshCompressionOptions | undefined): Promise<File> {
-    if (scene.textures.some(requiresTextureTransform)) {
-        const { RegisterKHR_texture_transform } = await import("@babylonjs/serializers/glTF/2.0/Extensions/KHR_texture_transform.pure.js");
-        RegisterKHR_texture_transform();
-    }
-    const { GLTF2Export } = await import("@babylonjs/serializers/glTF/2.0/glTFSerializer.js");
+    const { GLTF2Export } = await import("@babylonjs/serializers/glTF/2.0/index.js");
     const fileName = "scene.glb";
     const result = await GLTF2Export.GLBAsync(scene, fileName, geometryCompressionOptions);
     const root = result.files[fileName];
@@ -43,15 +38,4 @@ async function serializeGlbAsync(scene: BabylonScene, geometryCompressionOptions
         throw new Error(`The Babylon glTF serializer did not produce "${fileName}".`);
     }
     return new File([root], fileName, { type: "model/gltf-binary", lastModified: 0 });
-}
-
-function requiresTextureTransform(texture: BaseTexture): boolean {
-    return (
-        ("uOffset" in texture && texture.uOffset !== 0) ||
-        ("vOffset" in texture && texture.vOffset !== 0) ||
-        ("uScale" in texture && texture.uScale !== 1) ||
-        ("vScale" in texture && texture.vScale !== 1) ||
-        ("wAng" in texture && texture.wAng !== 0) ||
-        texture.coordinatesIndex !== 0
-    );
 }
