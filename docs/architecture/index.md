@@ -33,6 +33,10 @@ Runtime data is passed by reference.
 
 (Future)
 
+# Resources
+
+Each pipeline execution owns a resource scope. Resources are created on demand and shared by blocks within that execution. Blocks borrow resources; the scope retains them until execution completes or fails, then performs any required cleanup and releases its references.
+
 # Blocks
 
 Blocks are broadly categorized as follows.
