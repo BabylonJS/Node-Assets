@@ -17,7 +17,7 @@ Outbound end points are block **outputs**.
 
 Connection points types, in general, come in two forms.
 
-- File: for format- or byte-level operations. Examples: platform I/O
+- File: for format- or byte-level operations. Examples: platform I/O (future)
 - Content: for content-level operations. Examples: removing vertices, updating texture pixels
 
 ## Content
