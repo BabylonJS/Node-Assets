@@ -2,6 +2,22 @@ export function generateGltfDataUri(): string {
     return `data:${generateGltfJson()}`;
 }
 
+export function generateUnlitGltfDataUri(): string {
+    const gltf = JSON.parse(generateGltfJson()) as {
+        extensionsRequired?: string[];
+        extensionsUsed?: string[];
+        materials?: Array<{ extensions: { KHR_materials_unlit: Record<string, never> } }>;
+        meshes: Array<{ primitives: Array<{ material?: number }> }>;
+    };
+    gltf.extensionsRequired = ["KHR_materials_unlit"];
+    gltf.extensionsUsed = ["KHR_materials_unlit"];
+    gltf.materials = [{ extensions: { KHR_materials_unlit: {} } }];
+    gltf.meshes[0]?.primitives.forEach((primitive) => {
+        primitive.material = 0;
+    });
+    return `data:${JSON.stringify(gltf)}`;
+}
+
 export function generateTexturedGltfDataUri(): string {
     const png = "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEUlEQVQImWP4z8DwH4QZYAwAR8oH+Xm0fdIAAAAASUVORK5CYII=";
     const binary = "AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAABAAIA";

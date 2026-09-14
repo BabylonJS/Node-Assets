@@ -19,23 +19,24 @@ interface SingleFileSceneLoadOptions {
     readonly prepareSceneLoadAsync?: PrepareSceneLoadAsync;
 }
 
-export async function loadSceneWithPluginAsync(source: SceneSource, engine: AbstractEngine, loadPluginAsync: () => Promise<unknown>, options?: LoadOptions): Promise<Scene> {
-    const [{ LoadSceneAsync }] = await Promise.all([import("@babylonjs/core/Loading/sceneLoader.js"), loadPluginAsync()]);
+export async function loadSceneWithPluginAsync(source: SceneSource, engine: AbstractEngine, registerPlugin: () => void, options?: LoadOptions): Promise<Scene> {
+    registerPlugin();
+    const { LoadSceneAsync } = await import("@babylonjs/core/Loading/sceneLoader.js");
     return LoadSceneAsync(source, engine, options);
 }
 
 export async function loadSingleFileSceneWithPluginAsync(
     url: string,
     engine: AbstractEngine,
-    loadPluginAsync: () => Promise<unknown>,
+    registerPlugin: () => void,
     options: SingleFileSceneLoadOptions = {}
 ): Promise<Scene> {
     if (!isHttpUrl(url)) {
         if (options.pluginExtension === undefined && options.pluginOptions === undefined) {
-            return loadSceneWithPluginAsync(url, engine, loadPluginAsync);
+            return loadSceneWithPluginAsync(url, engine, registerPlugin);
         }
 
-        return loadSceneWithPluginAsync(url, engine, loadPluginAsync, {
+        return loadSceneWithPluginAsync(url, engine, registerPlugin, {
             ...(options.pluginExtension === undefined ? {} : { pluginExtension: options.pluginExtension }),
             ...(options.pluginOptions === undefined ? {} : { pluginOptions: options.pluginOptions }),
         });
@@ -63,7 +64,7 @@ export async function loadSingleFileSceneWithPluginAsync(
         if (resolvedPluginOptions !== undefined) {
             loadOptions.pluginOptions = resolvedPluginOptions;
         }
-        return await loadSceneWithPluginAsync(preparation.source, engine, loadPluginAsync, loadOptions);
+        return await loadSceneWithPluginAsync(preparation.source, engine, registerPlugin, loadOptions);
     } finally {
         abortController.abort();
     }

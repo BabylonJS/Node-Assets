@@ -1,5 +1,7 @@
 import type { BaseTexture } from "@babylonjs/core/Materials/Textures/baseTexture.js";
+import { RegisterSceneLoaderPlugin, type ISceneLoaderPluginFactory, type SceneLoaderPluginOptions } from "@babylonjs/core/Loading/sceneLoader.js";
 import type { Scene as BabylonScene } from "@babylonjs/core/scene.js";
+import { OBJFileLoaderMetadata } from "@babylonjs/loaders/OBJ/objFileLoader.metadata.js";
 
 import { BabylonSceneType } from "../connectionPoints/babylonScene";
 import { UrlType } from "../connectionPoints/url";
@@ -18,10 +20,9 @@ const ObjInputBlockDefinition = /* @__PURE__ */ defineBlock({
         engine: NullEngineResource,
     },
     runAsync: async (url, _config, { engine }) => {
-        const pluginPromise = import("@babylonjs/loaders/OBJ/index.js");
         let textureAssets = new Map<string, TextureAsset>();
         let materialTokens = new Map<string, string>();
-        const scene = await loadSingleFileSceneWithPluginAsync(url, engine, () => pluginPromise, {
+        const scene = await loadSingleFileSceneWithPluginAsync(url, engine, registerObjLoader, {
             includeRootUrl: false,
             pluginExtension: ".obj",
             pluginOptions: {
@@ -61,6 +62,16 @@ export class ObjInputBlock extends Block<typeof ObjInputBlockDefinition> {
     public constructor(options?: BlockOptions<typeof ObjInputBlockDefinition>) {
         super(ObjInputBlockDefinition, options);
     }
+}
+
+function registerObjLoader(): void {
+    RegisterSceneLoaderPlugin({
+        ...OBJFileLoaderMetadata,
+        createPlugin: async (options: SceneLoaderPluginOptions) => {
+            const { OBJFileLoader } = await import("@babylonjs/loaders/OBJ/objFileLoader.pure.js");
+            return new OBJFileLoader(options[OBJFileLoaderMetadata.name]);
+        },
+    } satisfies ISceneLoaderPluginFactory);
 }
 
 interface ObjLineReference {

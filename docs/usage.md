@@ -18,22 +18,22 @@ Named by noun.
     - Input: `string` which is a URL (HTTPS or data) that points to an FBX file.
     - Output: output (BabylonScene)
     - Resources: Babylon FBX loader
-    - Behavior: Uses the Babylon scene loader to load an FBX using NullEngine.
+    - Behavior: Uses the Babylon scene loader to load an FBX using NullEngine. The FBX loader implementation loads on demand.
 - `GltfInputBlock`
     - Input: `string` which is a URL (HTTPS or data) that points to a glTF or GLB.
     - Output: output (BabylonScene)
     - Resources: Babylon glTF loader
-    - Behavior: Uses the Babylon scene loader to load a glTF using NullEngine.
+    - Behavior: Uses the Babylon scene loader to load a glTF using NullEngine. The glTF 2 loader and each built-in extension implementation load on demand.
 - `ObjInputBlock`
     - Input: `string` which is a URL (HTTPS or data) that points to an OBJ file.
     - Output: output (BabylonScene)
     - Resources: Babylon OBJ loader
-    - Behavior: Uses the Babylon scene loader to load an OBJ using NullEngine. For HTTP(S) OBJ URLs, referenced MTL files and supported relative textures are fetched automatically and embedded before loading. Data-URI OBJ inputs must be self-contained; relative MTL or texture references require an HTTP(S) base URL.
+    - Behavior: Uses the Babylon scene loader to load an OBJ using NullEngine. The OBJ loader implementation loads on demand. For HTTP(S) OBJ URLs, referenced MTL files and supported relative textures are fetched automatically and embedded before loading. Data-URI OBJ inputs must be self-contained; relative MTL or texture references require an HTTP(S) base URL.
 - `StlInputBlock`
     - Input: `string` which is a URL (HTTPS or data) that points to an STL file.
     - Output: output (BabylonScene)
     - Resources: Babylon STL loader
-    - Behavior: Uses the Babylon scene loader to load an STL using NullEngine.
+    - Behavior: Uses the Babylon scene loader to load an STL using NullEngine. The STL loader implementation loads on demand.
 - `DracoEncoderBlock`
     - Input: none
     - Output: output (GltfMeshCompressionOptions)

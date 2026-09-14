@@ -1,3 +1,7 @@
+import { RegisterSceneLoaderPlugin, type ISceneLoaderPluginFactory, type SceneLoaderPluginOptions } from "@babylonjs/core/Loading/sceneLoader.js";
+import { registerBuiltInGLTFExtensions } from "@babylonjs/loaders/glTF/2.0/Extensions/dynamic.js";
+import { GLTFFileLoaderMetadata } from "@babylonjs/loaders/glTF/glTFFileLoader.metadata.js";
+
 import { BabylonSceneType } from "../connectionPoints/babylonScene";
 import { UrlType } from "../connectionPoints/url";
 import { fetchOrThrowAsync, isHttpUrl, loadSingleFileSceneWithPluginAsync, responseToDataUriAsync } from "../helpers/loadSceneWithPlugin";
@@ -13,7 +17,7 @@ const GltfInputBlockDefinition = /* @__PURE__ */ defineBlock({
         engine: NullEngineResource,
     },
     runAsync: (url, _config, { engine }) =>
-        loadSingleFileSceneWithPluginAsync(url, engine, () => import("@babylonjs/loaders/glTF/index.js"), {
+        loadSingleFileSceneWithPluginAsync(url, engine, registerGltfLoader, {
             prepareSceneLoadAsync: async (response, resolvedUrl, signal) => {
                 const format = await readGltfResponseAsync(response, resolvedUrl);
                 return {
@@ -40,6 +44,23 @@ export class GltfInputBlock extends Block<typeof GltfInputBlockDefinition> {
     public constructor(options?: BlockOptions<typeof GltfInputBlockDefinition>) {
         super(GltfInputBlockDefinition, options);
     }
+}
+
+function registerGltfLoader(): void {
+    RegisterSceneLoaderPlugin({
+        ...GLTFFileLoaderMetadata,
+        createPlugin: async (options: SceneLoaderPluginOptions) => {
+            const [{ GLTFFileLoader, RegisterGLTF2Loader }, { RegisterInstancedMesh }] = await Promise.all([
+                import("@babylonjs/loaders/glTF/2.0/glTFLoader.pure.js"),
+                import("@babylonjs/core/Meshes/instancedMesh.pure.js"),
+            ]);
+            RegisterInstancedMesh();
+            RegisterGLTF2Loader();
+            return new GLTFFileLoader(options[GLTFFileLoaderMetadata.name]);
+        },
+    } satisfies ISceneLoaderPluginFactory);
+
+    registerBuiltInGLTFExtensions();
 }
 
 interface GltfResponse {
