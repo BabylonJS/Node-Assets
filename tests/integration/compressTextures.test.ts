@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { Block } from "../../src/block/block";
-import { defineBlock } from "../../src/block/blockDefinition";
-import { BabylonSceneType } from "../../src/block/connectionPointType";
+import { Block } from "../../src/blocks/block";
+import { defineBlock } from "../../src/blocks/blockDefinition";
+import { BabylonSceneType } from "../../src/connectionPoints/babylonScene";
 import { CompressTexturesBlock, GltfInputBlock, GltfOutputBlock, NodeAsset } from "../../src/index";
 import { expectKtx2Image, parseGlbAsync } from "../helpers/glb";
 import { generateTexturedGltfDataUri } from "../helpers/gltf";
