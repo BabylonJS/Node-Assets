@@ -9,6 +9,7 @@
     "exports": {
         ".": {
             "types": "./dist/index.d.ts",
+            "browser": "./dist/index.browser.js",
             "import": "./dist/index.js"
         },
         "./package.json": "./package.json"
@@ -43,7 +44,7 @@
         "access": "public"
     },
     "scripts": {
-        "build": "vite build",
+        "build": "vite build && vite build --config vite.browser.config.ts",
         "typecheck": "tsc -p tsconfig.json --noEmit",
         "lint": "eslint . && pnpm typecheck",
         "lint:fix": "eslint . --fix",
@@ -60,6 +61,7 @@
         "@gltf-transform/core": "4.5.0",
         "@gltf-transform/extensions": "4.5.0",
         "@gltf-transform/functions": "4.5.0",
+        "@types/draco3dgltf": "1.4.3",
         "babylonpress-ktx2-encoder": "0.6.0",
         "draco3dgltf": "1.5.7",
         "meshoptimizer": "1.2.0",
@@ -67,7 +69,6 @@
     },
     "devDependencies": {
         "@eslint/js": "^10.0.1",
-        "@types/draco3dgltf": "1.4.3",
         "@types/node": "^26.1.1",
         "eslint": "^10.7.0",
         "eslint-config-prettier": "^10.1.8",
