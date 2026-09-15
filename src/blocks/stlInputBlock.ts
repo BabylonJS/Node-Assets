@@ -38,7 +38,7 @@ const StlInputBlockDefinition = /* @__PURE__ */ defineBlock({
         ),
 });
 
-/** Loads an STL URL into a glTF Transform document. */
+/** Loads an STL URL. */
 export class StlInputBlock extends Block<typeof StlInputBlockDefinition> {
     public constructor(options?: BlockOptions<typeof StlInputBlockDefinition>) {
         super(StlInputBlockDefinition, options);

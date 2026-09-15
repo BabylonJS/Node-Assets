@@ -21,7 +21,7 @@ const GltfInputBlockDefinition = /* @__PURE__ */ defineBlock({
     },
 });
 
-/** Loads a glTF or GLB URI into a glTF Transform document. */
+/** Loads a glTF or GLB URI. */
 export class GltfInputBlock extends Block<typeof GltfInputBlockDefinition> {
     public constructor(options?: BlockOptions<typeof GltfInputBlockDefinition>) {
         super(GltfInputBlockDefinition, options);

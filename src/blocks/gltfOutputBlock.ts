@@ -16,10 +16,10 @@ const GltfOutputBlockDefinition = /* @__PURE__ */ defineBlock({
     runAsync: (document, _config, { io }) => serializeGlbAsync(document, io.writeBinary.bind(io)),
 });
 
-/** Options for naming the block or supplying its initial document input. */
+/** Options for naming the block or supplying its initial input. */
 export type GltfOutputBlockOptions = BlockOptions<typeof GltfOutputBlockDefinition>;
 
-/** Serializes a glTF Transform document to a binary glTF file. */
+/** Serializes its input to a binary glTF file. */
 export class GltfOutputBlock extends Block<typeof GltfOutputBlockDefinition> {
     public constructor(options?: GltfOutputBlockOptions) {
         super(GltfOutputBlockDefinition, options);

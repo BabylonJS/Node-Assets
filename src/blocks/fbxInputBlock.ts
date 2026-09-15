@@ -38,7 +38,7 @@ const FbxInputBlockDefinition = /* @__PURE__ */ defineBlock({
         ),
 });
 
-/** Loads an FBX URL into a glTF Transform document. */
+/** Loads an FBX URL. */
 export class FbxInputBlock extends Block<typeof FbxInputBlockDefinition> {
     public constructor(options?: BlockOptions<typeof FbxInputBlockDefinition>) {
         super(FbxInputBlockDefinition, options);

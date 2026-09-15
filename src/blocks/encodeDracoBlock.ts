@@ -21,7 +21,7 @@ const EncodeDracoBlockDefinition = /* @__PURE__ */ defineBlock({
     },
 });
 
-/** Configures Draco compression for a glTF Transform document. */
+/** Applies Draco compression. */
 export class EncodeDracoBlock extends Block<typeof EncodeDracoBlockDefinition> {
     public constructor(options?: BlockOptions<typeof EncodeDracoBlockDefinition>) {
         super(EncodeDracoBlockDefinition, options);

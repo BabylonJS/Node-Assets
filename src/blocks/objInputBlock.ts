@@ -60,7 +60,7 @@ const ObjInputBlockDefinition = /* @__PURE__ */ defineBlock({
     },
 });
 
-/** Loads an OBJ URL and its HTTP(S) MTL and texture dependencies into a glTF Transform document. */
+/** Loads an OBJ URL and its HTTP(S) MTL and texture dependencies. */
 export class ObjInputBlock extends Block<typeof ObjInputBlockDefinition> {
     public constructor(options?: BlockOptions<typeof ObjInputBlockDefinition>) {
         super(ObjInputBlockDefinition, options);

@@ -21,7 +21,7 @@ const EncodeMeshoptBlockDefinition = /* @__PURE__ */ defineBlock({
     },
 });
 
-/** Configures Meshopt compression for a glTF Transform document. */
+/** Applies Meshopt compression. */
 export class EncodeMeshoptBlock extends Block<typeof EncodeMeshoptBlockDefinition> {
     public constructor(options?: BlockOptions<typeof EncodeMeshoptBlockDefinition>) {
         super(EncodeMeshoptBlockDefinition, options);
