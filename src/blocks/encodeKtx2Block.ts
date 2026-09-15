@@ -35,6 +35,8 @@ export class EncodeKTX2Block extends Block<typeof EncodeKtx2BlockDefinition> {
 }
 
 async function encodeKtx2Async(document: Document): Promise<Document> {
+    // The package transform exposes both platform implementations, causing browser bundlers to discover Node built-ins.
+    // Use the conditionally exported root encoder until the transform provides platform-conditional exports.
     const [{ encodeToKTX2 }, platformOptions] = await Promise.all([import("babylonpress-ktx2-encoder"), createPlatformOptionsAsync()]);
     let encodedTexture = false;
 
