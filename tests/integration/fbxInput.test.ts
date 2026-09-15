@@ -1,3 +1,4 @@
+import { NullEngine } from "@babylonjs/core/Engines/nullEngine.js";
 import { describe, expect, it, vi } from "vitest";
 
 import { FbxInputBlock, GltfOutputBlock, NodeAsset, NodeAssetContext } from "../../src/index";
@@ -62,6 +63,44 @@ describe("FBX input", () => {
             vi.unstubAllGlobals();
         }
     });
+
+    it("rejects when an external texture cannot be decoded", async () => {
+        const rootUrl = "https://example.com/model";
+        const redirectedRootUrl = "https://cdn.example.com/assets/scene.fbx";
+        const textureUrl = "https://cdn.example.com/assets/textures/diffuse.png";
+        const originalCreateTexture = NullEngine.prototype.createTexture;
+        const createTextureSpy = vi.spyOn(NullEngine.prototype, "createTexture").mockImplementation(function (this: NullEngine, ...args: Parameters<NullEngine["createTexture"]>) {
+            const buffer = args[7];
+            if (typeof buffer !== "string" || !buffer.startsWith("data:image/png")) {
+                return originalCreateTexture.apply(this, args);
+            }
+            args[5] = null;
+            const texture = originalCreateTexture.apply(this, args);
+            queueMicrotask(() => texture.onErrorObservable.notifyObservers({ message: "Unable to decode texture." }));
+            return texture;
+        });
+        vi.stubGlobal(
+            "fetch",
+            vi.fn((input: string | URL | Request) => {
+                if (String(input) === rootUrl) {
+                    const response = new Response(generateTexturedFbxDataWithUvs("textures/diffuse.png"));
+                    Object.defineProperty(response, "url", { value: redirectedRootUrl });
+                    return Promise.resolve(response);
+                }
+                if (String(input) === textureUrl) {
+                    return Promise.resolve(new Response(new Uint8Array([0, 1, 2, 3]), { headers: { "content-type": "image/png" } }));
+                }
+                return Promise.reject(new Error(`Unexpected fetch: ${String(input)}`));
+            })
+        );
+
+        try {
+            await expect(roundTripAsync(new FbxInputBlock({ input: rootUrl }))).rejects.toThrow();
+        } finally {
+            createTextureSpy.mockRestore();
+            vi.unstubAllGlobals();
+        }
+    }, 1_000);
 
     it("accepts input through an execution context", async () => {
         const source = new FbxInputBlock();

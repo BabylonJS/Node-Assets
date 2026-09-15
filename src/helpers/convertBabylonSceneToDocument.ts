@@ -151,8 +151,44 @@ function isUrlTexture(texture: BaseTexture): texture is UrlTexture {
 }
 
 function updateTextureAsync(texture: UrlTexture, dataUri: string, extension: string): Promise<void> {
-    return new Promise((resolve) => {
-        texture.updateURL(dataUri, dataUri, resolve, extension);
+    return new Promise((resolve, reject) => {
+        let settled = false;
+        let internalTexture: ReturnType<UrlTexture["getInternalTexture"]>;
+        const cleanup = () => {
+            internalTexture?.onErrorObservable.removeCallback(onError);
+        };
+        const onLoad = () => {
+            if (settled) {
+                return;
+            }
+            settled = true;
+            cleanup();
+            resolve();
+        };
+        const onError = ({ message, exception }: { readonly exception?: unknown; readonly message?: string }) => {
+            if (settled) {
+                return;
+            }
+            settled = true;
+            cleanup();
+            reject(new Error(message ?? "Failed to update texture.", { cause: exception }));
+        };
+
+        try {
+            texture.updateURL(dataUri, dataUri, onLoad, extension);
+            if (settled) {
+                return;
+            }
+            internalTexture = texture.getInternalTexture();
+            if (internalTexture === null) {
+                throw new Error("Texture update did not create an internal texture.");
+            }
+            internalTexture.onErrorObservable.add(onError);
+        } catch (error) {
+            settled = true;
+            cleanup();
+            reject(error);
+        }
     });
 }
 
