@@ -6,6 +6,7 @@ import type sharpFactory from "sharp";
 
 import { GltfDocumentType } from "../connectionPoints/gltfDocument";
 import { isNodeRuntime } from "../helpers/runtime";
+import { PlatformIOResource } from "../resources/platformIOResource";
 import { Block, type BlockOptions } from "./block";
 import { defineBlock } from "./blockDefinition";
 
@@ -17,7 +18,13 @@ const EncodeKtx2BlockDefinition = /* @__PURE__ */ defineBlock({
     type: "transform.encode-ktx2",
     input: GltfDocumentType,
     output: GltfDocumentType,
-    runAsync: encodeKtx2Async,
+    resources: {
+        io: PlatformIOResource,
+    },
+    runAsync: async (document, _config, { io }) => {
+        io.registerExtensions([KHRTextureBasisu]);
+        return encodeKtx2Async(document);
+    },
 });
 
 /** Encodes compatible document textures as KTX2. */

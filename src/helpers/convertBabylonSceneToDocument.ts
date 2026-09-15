@@ -1,6 +1,7 @@
 import type { BaseTexture } from "@babylonjs/core/Materials/Textures/baseTexture.js";
 import type { Scene as BabylonScene } from "@babylonjs/core/scene.js";
 import type { Document, PlatformIO } from "@gltf-transform/core";
+import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
 import type sharpFactory from "sharp";
 
 import { createDataUri } from "./loadSceneWithPlugin";
@@ -16,7 +17,7 @@ export async function convertBabylonSceneToDocumentAsync(scene: BabylonScene, io
         if (!(root instanceof Blob)) {
             throw new Error(`The Babylon glTF serializer did not produce "${fileName}".`);
         }
-        return io.readBinary(new Uint8Array(await root.arrayBuffer()));
+        return io.registerExtensions(ALL_EXTENSIONS).readBinary(new Uint8Array(await root.arrayBuffer()));
     } finally {
         scene.dispose();
     }

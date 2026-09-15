@@ -1,3 +1,5 @@
+import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
+
 import { GltfDocumentType } from "../connectionPoints/gltfDocument";
 import { UrlType } from "../connectionPoints/url";
 import { GltfDecoderResource } from "../resources/gltfDecoderResource";
@@ -14,7 +16,7 @@ const GltfInputBlockDefinition = /* @__PURE__ */ defineBlock({
         io: PlatformIOResource,
     },
     runAsync: async (url, _config, { decoders, io }) => {
-        const document = await io.registerDependencies(decoders).read(url);
+        const document = await io.registerExtensions(ALL_EXTENSIONS).registerDependencies(decoders).read(url);
         document.disposeExtension("KHR_draco_mesh_compression");
         document.disposeExtension("EXT_meshopt_compression");
         return document;

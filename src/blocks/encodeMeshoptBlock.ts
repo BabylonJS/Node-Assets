@@ -1,3 +1,4 @@
+import { EXTMeshoptCompression } from "@gltf-transform/extensions";
 import { meshopt } from "@gltf-transform/functions";
 
 import { GltfDocumentType } from "../connectionPoints/gltfDocument";
@@ -15,7 +16,7 @@ const EncodeMeshoptBlockDefinition = /* @__PURE__ */ defineBlock({
         io: PlatformIOResource,
     },
     runAsync: async (document, _config, { encoder, io }) => {
-        io.registerDependencies({ "meshopt.encoder": encoder });
+        io.registerExtensions([EXTMeshoptCompression]).registerDependencies({ "meshopt.encoder": encoder });
         await document.transform(meshopt({ encoder }));
         return document;
     },

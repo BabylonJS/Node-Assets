@@ -1,3 +1,4 @@
+import { KHRDracoMeshCompression } from "@gltf-transform/extensions";
 import { draco } from "@gltf-transform/functions";
 
 import { GltfDocumentType } from "../connectionPoints/gltfDocument";
@@ -15,7 +16,7 @@ const EncodeDracoBlockDefinition = /* @__PURE__ */ defineBlock({
         io: PlatformIOResource,
     },
     runAsync: async (document, _config, { encoder, io }) => {
-        io.registerDependencies({ "draco3d.encoder": encoder });
+        io.registerExtensions([KHRDracoMeshCompression]).registerDependencies({ "draco3d.encoder": encoder });
         await document.transform(draco());
         return document;
     },

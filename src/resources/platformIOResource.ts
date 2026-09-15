@@ -1,5 +1,4 @@
 import { WebIO, type NodeIO as NodeIOInstance, type PlatformIO } from "@gltf-transform/core";
-import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
 
 import { isNodeRuntime } from "../helpers/runtime";
 import type { Resource } from "./resource";
@@ -11,8 +10,7 @@ export const PlatformIOResource = {
 } satisfies Resource<PlatformIO>;
 
 async function createPlatformIOAsync(): Promise<PlatformIO> {
-    const io = isNodeRuntime() ? await createNodeIOAsync() : new WebIO();
-    return io.registerExtensions(ALL_EXTENSIONS);
+    return isNodeRuntime() ? createNodeIOAsync() : new WebIO();
 }
 
 async function createNodeIOAsync(): Promise<PlatformIO> {
