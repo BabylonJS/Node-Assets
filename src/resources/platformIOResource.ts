@@ -1,6 +1,6 @@
 import { WebIO, type NodeIO as NodeIOInstance, type PlatformIO } from "@gltf-transform/core";
 
-import { isNodeRuntime } from "../helpers/runtime";
+import { isNodeRuntime } from "../helpers/isNodeRuntime";
 import type { Resource } from "./resource";
 
 export const PlatformIOResource = {

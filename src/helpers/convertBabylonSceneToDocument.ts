@@ -5,7 +5,7 @@ import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
 import type sharpFactory from "sharp";
 
 import { createDataUri } from "./loadSceneWithPlugin";
-import { isNodeRuntime } from "./runtime";
+import { isNodeRuntime } from "./isNodeRuntime";
 
 export async function convertBabylonSceneToDocumentAsync(scene: BabylonScene, io: PlatformIO): Promise<Document> {
     try {

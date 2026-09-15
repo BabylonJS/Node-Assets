@@ -5,7 +5,7 @@ import type { IEncodeOptions } from "babylonpress-ktx2-encoder";
 import type sharpFactory from "sharp";
 
 import { GltfDocumentType } from "../connectionPoints/gltfDocument";
-import { isNodeRuntime } from "../helpers/runtime";
+import { isNodeRuntime } from "../helpers/isNodeRuntime";
 import { PlatformIOResource } from "../resources/platformIOResource";
 import { Block, type BlockOptions } from "./block";
 import { defineBlock } from "./blockDefinition";

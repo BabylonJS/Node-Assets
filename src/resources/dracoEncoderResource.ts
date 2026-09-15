@@ -1,7 +1,7 @@
 import encoderWasmUrl from "draco3dgltf/draco_encoder.wasm?url&no-inline";
 
 import { loadNodePackageFileAsync } from "../helpers/loadNodePackageFile";
-import { isNodeRuntime } from "../helpers/runtime";
+import { isNodeRuntime } from "../helpers/isNodeRuntime";
 import type { Resource } from "./resource";
 
 async function createDracoEncoderAsync() {

@@ -1,7 +1,7 @@
 import decoderWasmUrl from "draco3dgltf/draco_decoder_gltf.wasm?url&no-inline";
 
 import { loadNodePackageFileAsync } from "../helpers/loadNodePackageFile";
-import { isNodeRuntime } from "../helpers/runtime";
+import { isNodeRuntime } from "../helpers/isNodeRuntime";
 import type { Resource } from "./resource";
 
 async function createGltfDecodersAsync() {
