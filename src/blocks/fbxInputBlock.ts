@@ -1,8 +1,10 @@
 import { FBXFileLoaderMetadata } from "@babylonjs/loaders/FBX/fbxFileLoader.metadata.js";
 
-import { BabylonSceneType } from "../connectionPoints/babylonScene";
+import { GltfDocumentType } from "../connectionPoints/gltfDocument";
 import { UrlType } from "../connectionPoints/url";
+import { convertBabylonSceneToDocumentAsync } from "../helpers/convertBabylonSceneToDocument";
 import { NullEngineResource } from "../resources/nullEngineResource";
+import { PlatformIOResource } from "../resources/platformIOResource";
 import { Block, type BlockOptions } from "./block";
 import { defineBlock } from "./blockDefinition";
 import { loadSingleFileSceneWithPluginAsync, type SceneLoaderPluginFactory } from "../helpers/loadSceneWithPlugin";
@@ -22,17 +24,21 @@ const FbxLoaderFactory = {
 const FbxInputBlockDefinition = /* @__PURE__ */ defineBlock({
     type: "input.fbx",
     input: UrlType,
-    output: BabylonSceneType,
+    output: GltfDocumentType,
     resources: {
         engine: NullEngineResource,
+        io: PlatformIOResource,
     },
-    runAsync: (url, _config, { engine }) =>
-        loadSingleFileSceneWithPluginAsync(url, engine, FbxLoaderFactory, {
-            pluginExtension: ".fbx",
-        }),
+    runAsync: async (url, _config, { engine, io }) =>
+        convertBabylonSceneToDocumentAsync(
+            await loadSingleFileSceneWithPluginAsync(url, engine, FbxLoaderFactory, {
+                pluginExtension: ".fbx",
+            }),
+            io
+        ),
 });
 
-/** Loads an FBX URL into a Babylon.js scene. */
+/** Loads an FBX URL. */
 export class FbxInputBlock extends Block<typeof FbxInputBlockDefinition> {
     public constructor(options?: BlockOptions<typeof FbxInputBlockDefinition>) {
         super(FbxInputBlockDefinition, options);

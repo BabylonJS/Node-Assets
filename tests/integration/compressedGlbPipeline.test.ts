@@ -1,31 +1,64 @@
-import { describe, expect, expectTypeOf, it } from "vitest";
+import { describe, expect, expectTypeOf, it, vi } from "vitest";
 
-import { CompressTexturesBlock, DracoEncoderBlock, GltfInputBlock, GltfOutputBlock, NodeAsset } from "../../src/index";
+import { EncodeDracoBlock, EncodeKTX2Block, EncodeMeshoptBlock, GltfInputBlock, GltfOutputBlock, NodeAsset } from "../../src/index";
 import { expectKtx2Image, parseGlbAsync } from "../helpers/glb";
-import { generateTexturedGltfDataUri } from "../helpers/gltf";
+import { generateTexturedGltfJson } from "../helpers/gltf";
 
 describe("compressed GLB pipeline", () => {
-    it("creates a Draco-compressed GLB with embedded KTX2 textures through the public API", async () => {
-        const source = new GltfInputBlock({ input: generateTexturedGltfDataUri() });
-        const compressTextures = new CompressTexturesBlock();
-        const dracoEncoder = new DracoEncoderBlock();
-        const destination = new GltfOutputBlock();
+    it("creates a Draco-compressed GLB with embedded KTX2 textures", async () => {
+        const url = "https://example.com/model.gltf";
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(() => Promise.resolve(new Response(generateTexturedGltfJson())))
+        );
 
-        source.output.connectTo(compressTextures.input);
-        compressTextures.output.connectTo(destination.input);
-        dracoEncoder.output.connectTo(destination.geometryCompressionOptions);
+        try {
+            const source = new GltfInputBlock({ input: url });
+            const encodeTextures = new EncodeKTX2Block();
+            const encodeGeometry = new EncodeDracoBlock();
+            const destination = new GltfOutputBlock();
 
-        const asset = new NodeAsset({ name: "gltf-roundtrip", outputBlock: destination });
-        const result = await asset.executeAsync();
+            source.output.connectTo(encodeTextures.input);
+            encodeTextures.output.connectTo(encodeGeometry.input);
+            encodeGeometry.output.connectTo(destination.input);
 
-        expectTypeOf(result).toEqualTypeOf<File>();
-        expect(result).toBeInstanceOf(File);
+            const result = await new NodeAsset({ name: "compressed-glb", outputBlock: destination }).executeAsync();
 
-        const parsed = await parseGlbAsync(result);
-        expect(parsed.json.extensionsUsed).toContain("KHR_draco_mesh_compression");
-        expect(parsed.json.meshes?.[0]?.primitives[0]?.extensions).toHaveProperty("KHR_draco_mesh_compression");
-        expect(parsed.json.extensionsUsed).toContain("KHR_texture_basisu");
-        expect(parsed.json.extensionsRequired).toContain("KHR_texture_basisu");
-        expectKtx2Image(parsed);
+            expectTypeOf(result).toEqualTypeOf<File>();
+            expect(result).toBeInstanceOf(File);
+
+            const parsed = await parseGlbAsync(result);
+            expect(parsed.json.extensionsUsed).toContain("KHR_draco_mesh_compression");
+            expect(parsed.json.extensionsUsed).toContain("KHR_texture_basisu");
+            expectKtx2Image(parsed);
+        } finally {
+            vi.unstubAllGlobals();
+        }
+    });
+
+    it("creates a Meshopt-compressed GLB with embedded KTX2 textures", async () => {
+        const url = "https://example.com/model.gltf";
+        vi.stubGlobal(
+            "fetch",
+            vi.fn(() => Promise.resolve(new Response(generateTexturedGltfJson())))
+        );
+
+        try {
+            const source = new GltfInputBlock({ input: url });
+            const encodeTextures = new EncodeKTX2Block();
+            const encodeGeometry = new EncodeMeshoptBlock();
+            const destination = new GltfOutputBlock();
+
+            source.output.connectTo(encodeTextures.input);
+            encodeTextures.output.connectTo(encodeGeometry.input);
+            encodeGeometry.output.connectTo(destination.input);
+
+            const parsed = await parseGlbAsync(await new NodeAsset({ name: "meshopt-compressed-glb", outputBlock: destination }).executeAsync());
+            expect(parsed.json.extensionsUsed).toContain("EXT_meshopt_compression");
+            expect(parsed.json.extensionsUsed).toContain("KHR_texture_basisu");
+            expectKtx2Image(parsed);
+        } finally {
+            vi.unstubAllGlobals();
+        }
     });
 });

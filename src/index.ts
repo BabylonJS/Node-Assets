@@ -1,10 +1,10 @@
-export { CompressTexturesBlock } from "./blocks/compressTexturesBlock";
-export { DracoEncoderBlock } from "./blocks/dracoEncoderBlock";
+export { EncodeDracoBlock } from "./blocks/encodeDracoBlock";
+export { EncodeKTX2Block } from "./blocks/encodeKtx2Block";
+export { EncodeMeshoptBlock } from "./blocks/encodeMeshoptBlock";
 export { FbxInputBlock } from "./blocks/fbxInputBlock";
 export { GltfInputBlock } from "./blocks/gltfInputBlock";
 export { GltfOutputBlock, type GltfOutputBlockOptions } from "./blocks/gltfOutputBlock";
 export { ObjInputBlock } from "./blocks/objInputBlock";
 export { StlInputBlock } from "./blocks/stlInputBlock";
-export type { GltfMeshCompressionOptions } from "./connectionPoints/gltfMeshCompressionOptions";
 export { NodeAsset } from "./nodeAsset";
 export { NodeAssetContext } from "./nodeAssetContext";

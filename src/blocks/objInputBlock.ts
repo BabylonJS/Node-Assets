@@ -3,10 +3,12 @@ import { RegisterSceneLoaderPlugin, type ISceneLoaderPluginFactory, type SceneLo
 import type { Scene as BabylonScene } from "@babylonjs/core/scene.js";
 import { OBJFileLoaderMetadata } from "@babylonjs/loaders/OBJ/objFileLoader.metadata.js";
 
-import { BabylonSceneType } from "../connectionPoints/babylonScene";
+import { GltfDocumentType } from "../connectionPoints/gltfDocument";
 import { UrlType } from "../connectionPoints/url";
+import { convertBabylonSceneToDocumentAsync } from "../helpers/convertBabylonSceneToDocument";
 import { createDataUri, fetchOrThrowAsync, loadSingleFileSceneWithPluginAsync } from "../helpers/loadSceneWithPlugin";
 import { NullEngineResource } from "../resources/nullEngineResource";
+import { PlatformIOResource } from "../resources/platformIOResource";
 import { Block, type BlockOptions } from "./block";
 import { defineBlock } from "./blockDefinition";
 
@@ -15,11 +17,12 @@ const MaximumConcurrentTextureFetches = 8;
 const ObjInputBlockDefinition = /* @__PURE__ */ defineBlock({
     type: "input.obj",
     input: UrlType,
-    output: BabylonSceneType,
+    output: GltfDocumentType,
     resources: {
         engine: NullEngineResource,
+        io: PlatformIOResource,
     },
-    runAsync: async (url, _config, { engine }) => {
+    runAsync: async (url, _config, { engine, io }) => {
         let textureAssets = new Map<string, TextureAsset>();
         let materialTokens = new Map<string, string>();
         const scene = await loadSingleFileSceneWithPluginAsync(url, engine, registerObjLoader, {
@@ -53,11 +56,11 @@ const ObjInputBlockDefinition = /* @__PURE__ */ defineBlock({
         });
         await attachTextureDataAsync(scene, textureAssets);
         restoreMaterialNames(scene, materialTokens);
-        return scene;
+        return convertBabylonSceneToDocumentAsync(scene, io);
     },
 });
 
-/** Loads an OBJ URL and its HTTP(S) MTL and texture dependencies into a Babylon.js scene. */
+/** Loads an OBJ URL and its HTTP(S) MTL and texture dependencies. */
 export class ObjInputBlock extends Block<typeof ObjInputBlockDefinition> {
     public constructor(options?: BlockOptions<typeof ObjInputBlockDefinition>) {
         super(ObjInputBlockDefinition, options);

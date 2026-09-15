@@ -7,11 +7,22 @@ export function generateFbxData(): string {
 }
 
 export function generateTexturedFbxData(texturePath: string): string {
-    return generateAsciiFbxData(texturePath, false);
+    return generateAsciiFbxData(texturePath);
 }
 
 export function generateTexturedFbxDataWithUvs(texturePath: string): string {
     return generateAsciiFbxData(texturePath, true);
+}
+
+export function generateTgaTextureData(): Uint8Array {
+    const data = new Uint8Array(21);
+    data[2] = 2;
+    data[12] = 1;
+    data[14] = 1;
+    data[16] = 24;
+    data[17] = 0x20;
+    data.set([0, 0, 255], 18);
+    return data;
 }
 
 function generateAsciiFbxData(texturePath?: string, includeTextureCoordinates = false): string {
