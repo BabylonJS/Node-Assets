@@ -124,13 +124,12 @@ describe("KTX2 encoding", () => {
         }
     });
 
-    it("preserves unique extensionless texture URIs and removes obsolete WebP requirements", async () => {
+    it("appends .ktx2 to extensionless texture URIs without collisions", async () => {
         const document = new Document();
-        document.createExtension(EXTTextureWebP).setRequired(true);
-        document.createTexture("albedo").setURI("albedo").setMimeType("image/webp").setImage(generateTextureData());
+        document.createTexture("albedo").setURI("albedo").setMimeType("image/png").setImage(generateTextureData());
         document.createTexture("normal").setURI("normal").setMimeType("image/png").setImage(generateTextureData());
 
-        const result = await new NodeAsset({ name: "texture-metadata", outputBlock: new EncodeKTX2Block({ input: document }) }).executeAsync();
+        const result = await new NodeAsset({ name: "extensionless-texture-uris", outputBlock: new EncodeKTX2Block({ input: document }) }).executeAsync();
 
         expect(
             result
@@ -138,6 +137,15 @@ describe("KTX2 encoding", () => {
                 .listTextures()
                 .map((texture) => texture.getURI())
         ).toEqual(["albedo.ktx2", "normal.ktx2"]);
+    });
+
+    it("removes the WebP extension after converting every WebP texture", async () => {
+        const document = new Document();
+        document.createExtension(EXTTextureWebP).setRequired(true);
+        document.createTexture("albedo").setMimeType("image/webp").setImage(generateTextureData());
+
+        const result = await new NodeAsset({ name: "remove-webp-extension", outputBlock: new EncodeKTX2Block({ input: document }) }).executeAsync();
+
         expect(result.hasExtension(EXTTextureWebP.EXTENSION_NAME)).toBe(false);
     });
 });
