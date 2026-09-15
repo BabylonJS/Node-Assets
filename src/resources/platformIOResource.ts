@@ -1,4 +1,5 @@
-import type { PlatformIO } from "@gltf-transform/core";
+import { WebIO, type NodeIO as NodeIOInstance, type PlatformIO } from "@gltf-transform/core";
+import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
 
 import { isNodeRuntime } from "../helpers/runtime";
 import type { Resource } from "./resource";
@@ -10,7 +11,16 @@ export const PlatformIOResource = {
 } satisfies Resource<PlatformIO>;
 
 async function createPlatformIOAsync(): Promise<PlatformIO> {
-    const [{ NodeIO, WebIO }, { ALL_EXTENSIONS }] = await Promise.all([import("@gltf-transform/core"), import("@gltf-transform/extensions")]);
-    const io = isNodeRuntime() ? new NodeIO(fetch).setAllowNetwork(true) : new WebIO();
+    const io = isNodeRuntime() ? await createNodeIOAsync() : new WebIO();
     return io.registerExtensions(ALL_EXTENSIONS);
+}
+
+async function createNodeIOAsync(): Promise<PlatformIO> {
+    const moduleName = "@gltf-transform/core";
+    const { NodeIO } = (await import(/* @vite-ignore */ moduleName)) as { readonly NodeIO: NodeIOConstructor };
+    return new NodeIO(fetch).setAllowNetwork(true);
+}
+
+interface NodeIOConstructor {
+    new (fetch?: unknown, fetchConfig?: RequestInit): NodeIOInstance;
 }
