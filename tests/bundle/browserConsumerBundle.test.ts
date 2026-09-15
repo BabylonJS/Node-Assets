@@ -39,6 +39,7 @@ describe("browser consumer bundle", () => {
         expect(fileNames.some((fileName) => /draco_encoder.*\.wasm$/.test(fileName))).toBe(true);
     }, 120_000);
 
+    // TODO: Execute the published entry in a real browser once browser integration testing is available.
     it("runs the published entry in Node", async () => {
         const url = "https://example.com/model.gltf";
         vi.stubGlobal(
