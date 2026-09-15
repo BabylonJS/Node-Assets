@@ -24,6 +24,8 @@ export async function convertBabylonSceneToDocumentAsync(scene: BabylonScene, io
 }
 
 async function embedExternalTextureDataAsync(scene: BabylonScene): Promise<void> {
+    // URL-loaded Babylon textures may not retain CPU-readable source bytes, and NullEngine cannot fall back to GPU readback.
+    // Rebind fetched data before GLB export; non-glTF image formats are transcoded to PNG.
     const texturesByUrl = new Map<string, UrlTexture[]>();
     for (const texture of scene.textures) {
         if (!isUrlTexture(texture) || texture.url === null || texture.url.startsWith("data:")) {
