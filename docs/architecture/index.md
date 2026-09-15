@@ -66,7 +66,7 @@ Blocks have input and output connection points. Some might also have additional,
     - Uses: Babylon FBX loader
     - Behavior: Uses the Babylon scene loader to load an FBX using NullEngine, exports it as a GLB, then reimports the bytes as a `Document`.
 - `GltfInputBlock`
-    - Input: `string` which is a URL (HTTPS or data) that points to a glTF or GLB.
+    - Input: `string` URI accepted by the current `PlatformIO` that points to a glTF or GLB.
     - Output: `Document`
     - Behavior: Reads glTF or GLB into a `Document`, using glTF Transform's default extension handling.
 - `ObjInputBlock`
@@ -85,8 +85,8 @@ Blocks have input and output connection points. Some might also have additional,
 - `EncodeKTX2Block`
     - Input: `Document`
     - Output: `Document` (but in future should be type that locks images and/or textures)
-    - Uses: `ktx2` (`babylonpress-ktx2-encoder/gltf-transform`); `sharp` (Node.js only)
-    - Behavior: Compresses textures to KTX2 using `ktx2` defaults, preserving color-space and normal-map semantics.
+    - Uses: `encodeToKTX2` (`babylonpress-ktx2-encoder`); `sharp` (Node.js only)
+    - Behavior: Compresses textures to KTX2 using encoder defaults, preserving color-space and normal-map semantics.
 - `EncodeDracoBlock`
     - Input: `Document`
     - Output: `Document` (but in future should be type that locks geometry)

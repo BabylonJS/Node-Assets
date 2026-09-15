@@ -1,8 +1,10 @@
 import { STLFileLoaderMetadata } from "@babylonjs/loaders/STL/stlFileLoader.metadata.js";
 
-import { BabylonSceneType } from "../connectionPoints/babylonScene";
+import { GltfDocumentType } from "../connectionPoints/gltfDocument";
 import { UrlType } from "../connectionPoints/url";
+import { convertBabylonSceneToDocumentAsync } from "../helpers/convertBabylonSceneToDocument";
 import { NullEngineResource } from "../resources/nullEngineResource";
+import { PlatformIOResource } from "../resources/platformIOResource";
 import { Block, type BlockOptions } from "./block";
 import { defineBlock } from "./blockDefinition";
 import { loadSingleFileSceneWithPluginAsync, type SceneLoaderPluginFactory } from "../helpers/loadSceneWithPlugin";
@@ -22,17 +24,21 @@ const StlLoaderFactory = {
 const StlInputBlockDefinition = /* @__PURE__ */ defineBlock({
     type: "input.stl",
     input: UrlType,
-    output: BabylonSceneType,
+    output: GltfDocumentType,
     resources: {
         engine: NullEngineResource,
+        io: PlatformIOResource,
     },
-    runAsync: (url, _config, { engine }) =>
-        loadSingleFileSceneWithPluginAsync(url, engine, StlLoaderFactory, {
-            pluginExtension: ".stl",
-        }),
+    runAsync: async (url, _config, { engine, io }) =>
+        convertBabylonSceneToDocumentAsync(
+            await loadSingleFileSceneWithPluginAsync(url, engine, StlLoaderFactory, {
+                pluginExtension: ".stl",
+            }),
+            io
+        ),
 });
 
-/** Loads an STL URL into a Babylon.js scene. */
+/** Loads an STL URL into a glTF Transform document. */
 export class StlInputBlock extends Block<typeof StlInputBlockDefinition> {
     public constructor(options?: BlockOptions<typeof StlInputBlockDefinition>) {
         super(StlInputBlockDefinition, options);

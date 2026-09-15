@@ -12,8 +12,14 @@ export default defineConfig({
             fileName: () => "index.js",
         },
         rollupOptions: {
-            // Runtime dependencies stay external; explicitly bundled assets are emitted.
-            external: (id) => !isBundledDracoAsset(id) && (/^@babylonjs\//.test(id) || /^babylonpress-ktx2-encoder$/.test(id) || /^node:/.test(id) || /^sharp$/.test(id)),
+            external: (id) =>
+                /^@babylonjs\//.test(id) ||
+                /^@gltf-transform\//.test(id) ||
+                /^babylonpress-ktx2-encoder(?:\/|$)/.test(id) ||
+                /^draco3dgltf$/.test(id) ||
+                /^meshoptimizer$/.test(id) ||
+                /^node:/.test(id) ||
+                /^sharp$/.test(id),
         },
     },
     plugins: [
@@ -23,7 +29,3 @@ export default defineConfig({
         }),
     ],
 });
-
-function isBundledDracoAsset(id: string): boolean {
-    return id === "@babylonjs/core/assets/Draco/draco_encoder.wasm?url&no-inline" || id === "@babylonjs/core/assets/Draco/draco_encoder_wasm_wrapper.js?url&no-inline";
-}

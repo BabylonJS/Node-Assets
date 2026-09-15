@@ -1,125 +1,29 @@
-import { RegisterSceneLoaderPlugin, type ISceneLoaderPluginFactory, type SceneLoaderPluginOptions } from "@babylonjs/core/Loading/sceneLoader.js";
-import { registerBuiltInGLTFExtensions } from "@babylonjs/loaders/glTF/2.0/Extensions/dynamic.js";
-import { GLTFFileLoaderMetadata } from "@babylonjs/loaders/glTF/glTFFileLoader.metadata.js";
-
-import { BabylonSceneType } from "../connectionPoints/babylonScene";
+import { GltfDocumentType } from "../connectionPoints/gltfDocument";
 import { UrlType } from "../connectionPoints/url";
-import { fetchOrThrowAsync, isHttpUrl, loadSingleFileSceneWithPluginAsync, responseToDataUriAsync } from "../helpers/loadSceneWithPlugin";
-import { NullEngineResource } from "../resources/nullEngineResource";
+import { GltfDecoderResource } from "../resources/gltfDecoderResource";
+import { PlatformIOResource } from "../resources/platformIOResource";
 import { Block, type BlockOptions } from "./block";
 import { defineBlock } from "./blockDefinition";
 
 const GltfInputBlockDefinition = /* @__PURE__ */ defineBlock({
     type: "input.gltf",
     input: UrlType,
-    output: BabylonSceneType,
+    output: GltfDocumentType,
     resources: {
-        engine: NullEngineResource,
+        decoders: GltfDecoderResource,
+        io: PlatformIOResource,
     },
-    runAsync: (url, _config, { engine }) =>
-        loadSingleFileSceneWithPluginAsync(url, engine, registerGltfLoader, {
-            prepareSceneLoadAsync: async (response, resolvedUrl, signal) => {
-                const format = await readGltfResponseAsync(response, resolvedUrl);
-                return {
-                    source: format.source,
-                    pluginExtension: format.extension,
-                    pluginOptions: {
-                        gltf: {
-                            preprocessUrlAsync: async (dependencyUrl) => {
-                                if (!isHttpUrl(dependencyUrl)) {
-                                    return dependencyUrl;
-                                }
-
-                                return responseToDataUriAsync(await fetchOrThrowAsync(dependencyUrl, signal));
-                            },
-                        },
-                    },
-                };
-            },
-        }),
+    runAsync: async (url, _config, { decoders, io }) => {
+        const document = await io.registerDependencies(decoders).read(url);
+        document.disposeExtension("KHR_draco_mesh_compression");
+        document.disposeExtension("EXT_meshopt_compression");
+        return document;
+    },
 });
 
-/** Loads a glTF or GLB URL into a Babylon.js scene. */
+/** Loads a glTF or GLB URI into a glTF Transform document. */
 export class GltfInputBlock extends Block<typeof GltfInputBlockDefinition> {
     public constructor(options?: BlockOptions<typeof GltfInputBlockDefinition>) {
         super(GltfInputBlockDefinition, options);
-    }
-}
-
-function registerGltfLoader(): void {
-    RegisterSceneLoaderPlugin({
-        ...GLTFFileLoaderMetadata,
-        createPlugin: async (options: SceneLoaderPluginOptions) => {
-            const [{ GLTFFileLoader, RegisterGLTF2Loader }, { RegisterInstancedMesh }] = await Promise.all([
-                import("@babylonjs/loaders/glTF/2.0/glTFLoader.pure.js"),
-                import("@babylonjs/core/Meshes/instancedMesh.pure.js"),
-            ]);
-            RegisterInstancedMesh();
-            RegisterGLTF2Loader();
-            return new GLTFFileLoader(options[GLTFFileLoaderMetadata.name]);
-        },
-    } satisfies ISceneLoaderPluginFactory);
-
-    registerBuiltInGLTFExtensions();
-}
-
-interface GltfResponse {
-    readonly extension: ".gltf" | ".glb";
-    readonly source: string | Uint8Array;
-}
-
-async function readGltfResponseAsync(response: Response, url: string): Promise<GltfResponse> {
-    const extension = tryGetGltfExtension(url) ?? getGltfExtensionFromContentType(response.headers.get("content-type"));
-    if (extension === ".glb") {
-        return { extension, source: new Uint8Array(await response.arrayBuffer()) };
-    }
-    if (extension === ".gltf") {
-        return { extension, source: `data:${await response.text()}` };
-    }
-
-    const data = new Uint8Array(await response.arrayBuffer());
-    if (isGlb(data)) {
-        return { extension: ".glb", source: data };
-    }
-    const json = new TextDecoder().decode(data);
-    if (isGltfJson(json)) {
-        return { extension: ".gltf", source: `data:${json}` };
-    }
-    throw new Error(`Unable to determine the glTF format from "${url}".`);
-}
-
-function tryGetGltfExtension(url: string): ".gltf" | ".glb" | undefined {
-    const pathname = new URL(url).pathname.toLowerCase();
-    if (pathname.endsWith(".glb")) {
-        return ".glb";
-    }
-    if (pathname.endsWith(".gltf")) {
-        return ".gltf";
-    }
-    return undefined;
-}
-
-function getGltfExtensionFromContentType(contentType: string | null): ".gltf" | ".glb" | undefined {
-    switch (contentType?.split(";", 1)[0]?.trim().toLowerCase()) {
-        case "model/gltf-binary":
-            return ".glb";
-        case "model/gltf+json":
-        case "application/json":
-            return ".gltf";
-        default:
-            return undefined;
-    }
-}
-
-function isGlb(data: Uint8Array): boolean {
-    return data.byteLength >= 4 && data[0] === 0x67 && data[1] === 0x6c && data[2] === 0x54 && data[3] === 0x46;
-}
-
-function isGltfJson(json: string): boolean {
-    try {
-        const parsed = JSON.parse(json) as { asset?: { version?: unknown } };
-        return typeof parsed.asset?.version === "string";
-    } catch {
-        return false;
     }
 }

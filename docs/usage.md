@@ -18,17 +18,17 @@ const result = await asset.executeAsync();
 
 # Example: Compressing GLB
 
-Same as before, but now add the `CompressTexturesBlock` transform and the `DracoEncoderBlock` input.
+Same as before, but now add KTX2 texture encoding and Draco geometry encoding.
 
 ```ts
 const source = new GltfInputBlock({ input: "https://assets.babylonjs.com/meshes/box.glb" });
-const compressTextures = new CompressTexturesBlock();
-const dracoEncoder = new DracoEncoderBlock();
+const encodeTextures = new EncodeKTX2Block();
+const encodeGeometry = new EncodeDracoBlock();
 const destination = new GltfOutputBlock();
 
-source.output.connectTo(compressTextures.input);
-compressTextures.output.connectTo(destination.input);
-dracoEncoder.output.connectTo(destination.geometryCompressionOptions);
+source.output.connectTo(encodeTextures.input);
+encodeTextures.output.connectTo(encodeGeometry.input);
+encodeGeometry.output.connectTo(destination.input);
 
 const asset = new NodeAsset({
     name: "gltf-roundtrip",

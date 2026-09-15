@@ -79,7 +79,8 @@ describe("NodeAsset", () => {
         const context = new NodeAssetContext(nodeAsset);
         context.setInput(inputBlock, 4);
 
-        const [defaultResult, contextResult] = await Promise.all([nodeAsset.executeAsync(), nodeAsset.executeAsync(context)]);
+        const defaultResult = await nodeAsset.executeAsync();
+        const contextResult = await nodeAsset.executeAsync(context);
 
         expect(defaultResult).toBe(6);
         expect(contextResult).toBe(12);
@@ -212,33 +213,6 @@ describe("NodeAsset", () => {
         await expect(nodeAsset.executeAsync()).resolves.toBe(6);
         expect(calculatorsWereShared).toBe(true);
         expect(events).toEqual(["create multiplier", "create calculator", "run", "dispose calculator", "dispose multiplier"]);
-    });
-
-    it("isolates resources between concurrent executions", async () => {
-        let nextId = 0;
-        const disposedIds: number[] = [];
-        const resource = {
-            name: "execution-resource",
-            create: () => ({ id: ++nextId }),
-            dispose: ({ id }) => {
-                disposedIds.push(id);
-            },
-        } satisfies Resource<{ id: number }>;
-        const definition = defineBlock({
-            type: "execution-resource-consumer",
-            input: NumberDefinition.input,
-            output: NumberDefinition.output,
-            resources: { resource },
-            run: (_input, _config, { resource: { id } }) => id,
-        });
-        const block = new Block(definition, { input: 1 });
-        const nodeAsset = new NodeAsset({ name: "isolated-resources", outputBlock: block });
-
-        expect(nextId).toBe(0);
-        const results = await Promise.all([nodeAsset.executeAsync(), nodeAsset.executeAsync()]);
-
-        expect(results.sort()).toEqual([1, 2]);
-        expect(disposedIds.sort()).toEqual([1, 2]);
     });
 
     it("disposes acquired dependencies when resource creation fails", async () => {

@@ -1,27 +1,7 @@
-export function generateGltfDataUri(): string {
-    return `data:${generateGltfJson()}`;
-}
-
-export function generateUnlitGltfDataUri(): string {
-    const gltf = JSON.parse(generateGltfJson()) as {
-        extensionsRequired?: string[];
-        extensionsUsed?: string[];
-        materials?: Array<{ extensions: { KHR_materials_unlit: Record<string, never> } }>;
-        meshes: Array<{ primitives: Array<{ material?: number }> }>;
-    };
-    gltf.extensionsRequired = ["KHR_materials_unlit"];
-    gltf.extensionsUsed = ["KHR_materials_unlit"];
-    gltf.materials = [{ extensions: { KHR_materials_unlit: {} } }];
-    gltf.meshes[0]?.primitives.forEach((primitive) => {
-        primitive.material = 0;
-    });
-    return `data:${JSON.stringify(gltf)}`;
-}
-
-export function generateTexturedGltfDataUri(): string {
+export function generateTexturedGltfJson(): string {
     const png = "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEUlEQVQImWP4z8DwH4QZYAwAR8oH+Xm0fdIAAAAASUVORK5CYII=";
     const binary = "AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAAAAAAAAAAAAIA/AAABAAIA";
-    return `data:${JSON.stringify({
+    return JSON.stringify({
         asset: { version: "2.0" },
         accessors: [
             { bufferView: 0, componentType: 5126, count: 3, max: [1, 1, 0], min: [0, 0, 0], type: "VEC3" },
@@ -51,7 +31,7 @@ export function generateTexturedGltfDataUri(): string {
         scene: 0,
         scenes: [{ nodes: [0] }],
         textures: [{ sampler: 0, source: 0 }],
-    })}`;
+    });
 }
 
 export function generateGlbDataUri(): string {
@@ -90,7 +70,7 @@ export function generateGlbDataUri(): string {
     return `data:model/gltf-binary;base64,${toBase64(glb)}`;
 }
 
-function generateGltfJson(): string {
+export function generateGltfJson(): string {
     return JSON.stringify({
         asset: { version: "2.0" },
         buffers: [
@@ -114,6 +94,19 @@ function generateGltfJson(): string {
         scene: 0,
         scenes: [{ nodes: [0] }],
     });
+}
+
+export function decodeDataUri(dataUri: string): string | ArrayBuffer {
+    if (dataUri.startsWith("data:{")) {
+        return dataUri.slice("data:".length);
+    }
+
+    const separator = dataUri.indexOf(",");
+    const payload = dataUri.slice(separator + 1);
+    if (!dataUri.slice(0, separator).endsWith(";base64")) {
+        return payload;
+    }
+    return Uint8Array.from(atob(payload), (character) => character.charCodeAt(0)).buffer;
 }
 
 function toBase64(data: Uint8Array): string {

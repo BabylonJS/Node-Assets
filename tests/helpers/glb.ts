@@ -3,7 +3,11 @@ import { expect } from "vitest";
 export const KTX2_MAGIC = new Uint8Array([0xab, 0x4b, 0x54, 0x58, 0x20, 0x32, 0x30, 0xbb, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 export interface GlbJson {
-    readonly bufferViews?: ReadonlyArray<{ readonly byteLength: number; readonly byteOffset?: number }>;
+    readonly bufferViews?: ReadonlyArray<{
+        readonly byteLength: number;
+        readonly byteOffset?: number;
+        readonly extensions?: Readonly<Record<string, unknown>>;
+    }>;
     readonly extensionsRequired?: readonly string[];
     readonly extensionsUsed?: readonly string[];
     readonly images?: ReadonlyArray<{ readonly bufferView?: number; readonly mimeType?: string; readonly name?: string }>;
@@ -29,9 +33,6 @@ export interface GlbJson {
 }
 
 interface GlbTextureInfo {
-    readonly extensions?: {
-        readonly KHR_texture_transform?: unknown;
-    };
     readonly index?: number;
 }
 

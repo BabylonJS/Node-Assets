@@ -1,41 +1,33 @@
-import type { Scene as BabylonScene } from "@babylonjs/core/scene.js";
+import type { Document } from "@gltf-transform/core";
 
-import { BabylonSceneType } from "../connectionPoints/babylonScene";
 import { FileType } from "../connectionPoints/file";
-import { GltfMeshCompressionOptionsType, type GltfMeshCompressionOptions } from "../connectionPoints/gltfMeshCompressionOptions";
-import { Block, type BlockOptions, type InputPort } from "./block";
+import { GltfDocumentType } from "../connectionPoints/gltfDocument";
+import { PlatformIOResource } from "../resources/platformIOResource";
+import { Block, type BlockOptions } from "./block";
 import { defineBlock } from "./blockDefinition";
 
 const GltfOutputBlockDefinition = /* @__PURE__ */ defineBlock({
     type: "output.gltf",
-    input: BabylonSceneType,
-    auxiliaryInputs: {
-        geometryCompressionOptions: GltfMeshCompressionOptionsType,
-    },
+    input: GltfDocumentType,
     output: FileType,
-    runAsync: (scene, _config, _resources, { geometryCompressionOptions }) => serializeGlbAsync(scene, geometryCompressionOptions),
+    resources: {
+        io: PlatformIOResource,
+    },
+    runAsync: (document, _config, { io }) => serializeGlbAsync(document, io.writeBinary.bind(io)),
 });
 
-/** Options for naming the block or supplying its initial scene input. */
+/** Options for naming the block or supplying its initial document input. */
 export type GltfOutputBlockOptions = BlockOptions<typeof GltfOutputBlockDefinition>;
 
-/** Serializes a Babylon.js scene to a binary glTF file. */
+/** Serializes a glTF Transform document to a binary glTF file. */
 export class GltfOutputBlock extends Block<typeof GltfOutputBlockDefinition> {
-    public readonly geometryCompressionOptions: InputPort<typeof GltfMeshCompressionOptionsType>;
-
     public constructor(options?: GltfOutputBlockOptions) {
         super(GltfOutputBlockDefinition, options);
-        this.geometryCompressionOptions = this.auxiliaryInputs.geometryCompressionOptions;
     }
 }
 
-async function serializeGlbAsync(scene: BabylonScene, geometryCompressionOptions: GltfMeshCompressionOptions | undefined): Promise<File> {
-    const { GLTF2Export } = await import("@babylonjs/serializers/glTF/2.0/index.js");
+async function serializeGlbAsync(document: Document, writeBinaryAsync: (document: Document) => Promise<Uint8Array<ArrayBuffer>>): Promise<File> {
     const fileName = "scene.glb";
-    const result = await GLTF2Export.GLBAsync(scene, fileName, geometryCompressionOptions);
-    const root = result.files[fileName];
-    if (!(root instanceof Blob)) {
-        throw new Error(`The Babylon glTF serializer did not produce "${fileName}".`);
-    }
-    return new File([root], fileName, { type: "model/gltf-binary", lastModified: 0 });
+    const data = await writeBinaryAsync(document);
+    return new File([data], fileName, { type: "model/gltf-binary", lastModified: 0 });
 }
