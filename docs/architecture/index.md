@@ -37,6 +37,8 @@ Runtime data is passed by reference.
 
 Resources are reusable values owned by a pipeline execution's resource scope, such as a shared `PlatformIO` instance. They are created on demand and shared by blocks within that execution. Blocks borrow resources; the scope retains them until execution completes or fails, then performs any required cleanup and releases its references.
 
+Worker-backed encoding is future work.
+
 # Blocks
 
 Blocks are broadly categorized as follows.
@@ -66,7 +68,7 @@ Blocks have input and output connection points. Some might also have additional,
 - `GltfInputBlock`
     - Input: `string` which is a URL (HTTPS or data) that points to a glTF or GLB.
     - Output: `Document`
-    - Behavior: Self-explanatory, I hope.
+    - Behavior: Reads glTF or GLB into a `Document`, using glTF Transform's default extension handling.
 - `ObjInputBlock`
     - Input: `string` which is a URL (HTTPS or data) that points to an OBJ file.
     - Output: `Document`
@@ -84,17 +86,17 @@ Blocks have input and output connection points. Some might also have additional,
     - Input: `Document`
     - Output: `Document` (but in future should be type that locks images and/or textures)
     - Uses: `ktx2` (`babylonpress-ktx2-encoder/gltf-transform`); `sharp` (Node.js only)
-    - Behavior: Compresses textures to KTX2 using `ktx2`, loading and preparing the encoder internally.
+    - Behavior: Compresses textures to KTX2 using `ktx2` defaults, preserving color-space and normal-map semantics.
 - `EncodeDracoBlock`
     - Input: `Document`
     - Output: `Document` (but in future should be type that locks geometry)
     - Uses: initialized `EncoderModule` (`draco3dgltf`)
-    - Behavior: Uses glTF Transform's Draco compression behavior, loading and initializing the encoder internally.
+    - Behavior: Uses glTF Transform's Draco compression behavior with library-default tuning.
 - `EncodeMeshoptBlock`
     - Input: `Document`
     - Output: `Document` (but in future should be type that locks geometry)
     - Uses: `MeshoptEncoder` (`meshoptimizer`)
-    - Behavior: Uses glTF Transform's Meshopt compression behavior, loading and preparing the encoder internally.
+    - Behavior: Uses glTF Transform's Meshopt compression behavior with library-default tuning.
 
 # Outputs
 
