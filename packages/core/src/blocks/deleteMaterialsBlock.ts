@@ -45,6 +45,7 @@ function deleteMaterials(document: Document): Document {
             const child = edge.getChild();
             if (child instanceof Texture) {
                 candidateTextures.add(child);
+                pending.push(child);
             } else if (child instanceof ExtensionProperty) {
                 descendantExtensionProperties.add(child);
                 affectedExtensionNames.add(child.extensionName);
@@ -67,12 +68,10 @@ function deleteMaterials(document: Document): Document {
     materials.forEach((material) => material.dispose());
     disposeOrphanedExtensionProperties(descendantExtensionProperties);
 
-    for (const extension of root.listExtensionsUsed()) {
-        if (hasMaterialVariants && extension.extensionName === "KHR_materials_variants") {
-            extension.dispose();
-        } else if (affectedExtensionNames.has(extension.extensionName) && extension.listProperties().length === 0) {
-            extension.dispose();
-        }
+    if (hasMaterialVariants) {
+        root.listExtensionsUsed()
+            .find((extension) => extension.extensionName === "KHR_materials_variants")
+            ?.dispose();
     }
 
     for (const texture of candidateTextures) {
@@ -84,9 +83,12 @@ function deleteMaterials(document: Document): Document {
             texture.setImage(null).setURI("").setMimeType("").dispose();
         }
     }
+    disposeOrphanedExtensionProperties(descendantExtensionProperties);
 
     for (const extension of root.listExtensionsUsed()) {
-        if (affectedTextureExtensionNames.has(extension.extensionName) && !isTextureExtensionInUse(extension.extensionName, root.listTextures())) {
+        const hasNoProperties = affectedExtensionNames.has(extension.extensionName) && extension.listProperties().length === 0;
+        const hasNoTextures = affectedTextureExtensionNames.has(extension.extensionName) && !isTextureExtensionInUse(extension.extensionName, root.listTextures());
+        if (hasNoProperties || hasNoTextures) {
             extension.dispose();
         }
     }

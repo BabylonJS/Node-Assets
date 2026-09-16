@@ -61,8 +61,10 @@ describe("DeleteMaterialsBlock", () => {
 
         const xmpExtension = document.createExtension(KHRXMP);
         const packet = xmpExtension.createPacket();
+        const texturePacket = xmpExtension.createPacket();
         material.setExtension(KHRXMP.EXTENSION_NAME, packet);
         node.setExtension(KHRXMP.EXTENSION_NAME, packet);
+        extensionTexture.setExtension(KHRXMP.EXTENSION_NAME, texturePacket);
 
         const block = new DeleteMaterialsBlock({ input: document });
         await new NodeAsset({ name: "delete-material-extensions", outputBlock: block }).executeAsync();
@@ -72,6 +74,7 @@ describe("DeleteMaterialsBlock", () => {
         expect(primitive.getExtension(KHRMaterialsVariants.EXTENSION_NAME)).toBeNull();
         expect(primitive.getExtension(EXTMeshFeatures.EXTENSION_NAME)).not.toBeNull();
         expect(node.getExtension(KHRXMP.EXTENSION_NAME)).toBe(packet);
+        expect(xmpExtension.listPackets()).toEqual([packet]);
         expect(document.getRoot().listExtensionsUsed()).toEqual([meshFeaturesExtension, xmpExtension]);
         expect(document.getRoot().listExtensionsRequired()).toEqual([]);
     });
