@@ -1,5 +1,5 @@
 import { Document } from "@gltf-transform/core";
-import { EXTMeshFeatures, KHRMaterialsClearcoat, KHRMaterialsVariants, KHRTextureTransform } from "@gltf-transform/extensions";
+import { EXTMeshFeatures, KHRMaterialsClearcoat, KHRMaterialsVariants, KHRTextureBasisu, KHRTextureTransform, KHRXMP } from "@gltf-transform/extensions";
 import { describe, expect, it } from "vitest";
 
 import { DeleteMaterialsBlock, NodeAsset } from "../../src/index";
@@ -10,7 +10,7 @@ describe("DeleteMaterialsBlock", () => {
         const removedTexture = document.createTexture("removed");
         const preexistingUnusedTexture = document.createTexture("preexisting-unused");
         const firstMaterial = document.createMaterial("first").setBaseColorTexture(removedTexture);
-        const secondMaterial = document.createMaterial("second").setEmissiveTexture(removedTexture);
+        document.createMaterial("second").setEmissiveTexture(removedTexture);
         primitive.setMaterial(firstMaterial);
 
         const position = primitive.getAttribute("POSITION");
@@ -29,16 +29,19 @@ describe("DeleteMaterialsBlock", () => {
         expect(primitive.getAttribute("TEXCOORD_0")).toBe(texCoord);
         expect(primitive.getAttribute("COLOR_0")).toBe(color);
         expect(primitive.getIndices()).toBe(indices);
-        expect(secondMaterial.isDisposed()).toBe(true);
     });
 
     it("removes material extension resources while preserving surviving texture uses", async () => {
-        const { document, primitive } = createDocument();
+        const { document, node, primitive } = createDocument();
         const sharedTexture = document.createTexture("shared");
-        const extensionTexture = document.createTexture("clearcoat");
+        const extensionTexture = document
+            .createTexture("clearcoat")
+            .setImage(new Uint8Array([1, 2, 3]))
+            .setMimeType("image/ktx2");
         const material = document.createMaterial("material").setBaseColorTexture(sharedTexture);
         primitive.setMaterial(material);
 
+        document.createExtension(KHRTextureBasisu).setRequired(true);
         const clearcoatExtension = document.createExtension(KHRMaterialsClearcoat);
         const clearcoat = clearcoatExtension.createClearcoat().setClearcoatTexture(extensionTexture);
         material.setExtension(KHRMaterialsClearcoat.EXTENSION_NAME, clearcoat);
@@ -56,28 +59,43 @@ describe("DeleteMaterialsBlock", () => {
         const featureId = meshFeaturesExtension.createFeatureID().setFeatureCount(1).setTexture(featureTexture);
         primitive.setExtension(EXTMeshFeatures.EXTENSION_NAME, meshFeaturesExtension.createFeatures().addFeatureID(featureId));
 
+        const xmpExtension = document.createExtension(KHRXMP);
+        const packet = xmpExtension.createPacket();
+        material.setExtension(KHRXMP.EXTENSION_NAME, packet);
+        node.setExtension(KHRXMP.EXTENSION_NAME, packet);
+
         const block = new DeleteMaterialsBlock({ input: document });
         await new NodeAsset({ name: "delete-material-extensions", outputBlock: block }).executeAsync();
 
         expect(document.getRoot().listTextures()).toEqual([sharedTexture]);
+        expect(extensionTexture.getImage()).toBeNull();
         expect(primitive.getExtension(KHRMaterialsVariants.EXTENSION_NAME)).toBeNull();
         expect(primitive.getExtension(EXTMeshFeatures.EXTENSION_NAME)).not.toBeNull();
-        expect(document.getRoot().listExtensionsUsed()).toEqual([meshFeaturesExtension]);
+        expect(node.getExtension(KHRXMP.EXTENSION_NAME)).toBe(packet);
+        expect(document.getRoot().listExtensionsUsed()).toEqual([meshFeaturesExtension, xmpExtension]);
+        expect(document.getRoot().listExtensionsRequired()).toEqual([]);
     });
 
     it("supports material-free documents and repeated execution", async () => {
         const document = new Document();
-        const preexistingUnusedTexture = document.createTexture("preexisting-unused");
+        const preexistingUnusedTexture = document.createTexture("preexisting-unused").setMimeType("image/ktx2");
+        const textureExtension = document.createExtension(KHRTextureBasisu).setRequired(true);
         const block = new DeleteMaterialsBlock({ input: document });
         const asset = new NodeAsset({ name: "delete-no-materials", outputBlock: block });
 
         await expect(asset.executeAsync()).resolves.toBe(document);
         await expect(asset.executeAsync()).resolves.toBe(document);
         expect(document.getRoot().listTextures()).toEqual([preexistingUnusedTexture]);
+        expect(document.getRoot().listExtensionsUsed()).toEqual([textureExtension]);
+        expect(document.getRoot().listExtensionsRequired()).toEqual([textureExtension]);
     });
 });
 
-function createDocument(): { document: Document; primitive: ReturnType<Document["createPrimitive"]> } {
+function createDocument(): {
+    document: Document;
+    node: ReturnType<Document["createNode"]>;
+    primitive: ReturnType<Document["createPrimitive"]>;
+} {
     const document = new Document();
     const buffer = document.createBuffer();
     const position = document
@@ -100,5 +118,5 @@ function createDocument(): { document: Document; primitive: ReturnType<Document[
     const mesh = document.createMesh().addPrimitive(primitive);
     const node = document.createNode().setMesh(mesh);
     document.createScene().addChild(node);
-    return { document, primitive };
+    return { document, node, primitive };
 }

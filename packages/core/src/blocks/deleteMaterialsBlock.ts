@@ -25,11 +25,14 @@ function deleteMaterials(document: Document): Document {
     const root = document.getRoot();
     const graph = document.getGraph();
     const materials = root.listMaterials();
-    const affectedExtensionProperties = new Set<ExtensionProperty>();
+    const materialSet = new Set<Property>(materials);
+    const descendantExtensionProperties = new Set<ExtensionProperty>();
     const affectedExtensionNames = new Set<string>();
+    const affectedTextureExtensionNames = new Set<string>();
     const candidateTextures = new Set<Texture>();
     const pending: Property[] = [...materials];
     const visited = new Set<Property>();
+    let hasMaterialVariants = false;
 
     while (pending.length > 0) {
         const property = pending.pop();
@@ -43,7 +46,7 @@ function deleteMaterials(document: Document): Document {
             if (child instanceof Texture) {
                 candidateTextures.add(child);
             } else if (child instanceof ExtensionProperty) {
-                affectedExtensionProperties.add(child);
+                descendantExtensionProperties.add(child);
                 affectedExtensionNames.add(child.extensionName);
                 pending.push(child);
             } else if (child instanceof TextureInfo) {
@@ -51,30 +54,75 @@ function deleteMaterials(document: Document): Document {
             }
         }
 
-        for (const edge of graph.listParentEdges(property)) {
-            const parent = edge.getParent();
-            if (parent instanceof ExtensionProperty) {
-                affectedExtensionProperties.add(parent);
-                affectedExtensionNames.add(parent.extensionName);
-                pending.push(parent);
+        if (materialSet.has(property)) {
+            for (const edge of graph.listParentEdges(property)) {
+                const parent = edge.getParent();
+                if (parent instanceof ExtensionProperty && parent.extensionName === "KHR_materials_variants") {
+                    hasMaterialVariants = true;
+                }
             }
         }
     }
 
     materials.forEach((material) => material.dispose());
-    affectedExtensionProperties.forEach((property) => property.dispose());
+    disposeOrphanedExtensionProperties(descendantExtensionProperties);
 
     for (const extension of root.listExtensionsUsed()) {
-        if (affectedExtensionNames.has(extension.extensionName) && extension.listProperties().length === 0) {
+        if (hasMaterialVariants && extension.extensionName === "KHR_materials_variants") {
+            extension.dispose();
+        } else if (affectedExtensionNames.has(extension.extensionName) && extension.listProperties().length === 0) {
             extension.dispose();
         }
     }
 
     for (const texture of candidateTextures) {
         if (texture.listParents().every((parent) => parent === root)) {
-            texture.dispose();
+            const textureExtensionName = getTextureExtensionName(texture.getMimeType());
+            if (textureExtensionName !== undefined) {
+                affectedTextureExtensionNames.add(textureExtensionName);
+            }
+            texture.setImage(null).setURI("").setMimeType("").dispose();
+        }
+    }
+
+    for (const extension of root.listExtensionsUsed()) {
+        if (affectedTextureExtensionNames.has(extension.extensionName) && !isTextureExtensionInUse(extension.extensionName, root.listTextures())) {
+            extension.dispose();
         }
     }
 
     return document;
+}
+
+function disposeOrphanedExtensionProperties(properties: Set<ExtensionProperty>): void {
+    let disposedProperty = true;
+    while (disposedProperty) {
+        disposedProperty = false;
+        for (const property of properties) {
+            if (property.isDisposed()) {
+                properties.delete(property);
+            } else if (property.listParents().length === 0) {
+                property.dispose();
+                properties.delete(property);
+                disposedProperty = true;
+            }
+        }
+    }
+}
+
+function getTextureExtensionName(mimeType: string): string | undefined {
+    switch (mimeType) {
+        case "image/avif":
+            return "EXT_texture_avif";
+        case "image/ktx2":
+            return "KHR_texture_basisu";
+        case "image/webp":
+            return "EXT_texture_webp";
+        default:
+            return undefined;
+    }
+}
+
+function isTextureExtensionInUse(extensionName: string, textures: readonly Texture[]): boolean {
+    return textures.some((texture) => getTextureExtensionName(texture.getMimeType()) === extensionName);
 }
