@@ -59,6 +59,28 @@ const asset = new NodeAsset({
 const result = await asset.executeAsync();
 ```
 
+# Example: Removing materials
+
+Add a `DeleteMaterialsBlock` to remove every material and material assignment from a glTF. Textures and images that become unused as a result are also removed, while textures that were already unused or remain referenced elsewhere are preserved.
+
+```ts
+const source = new GltfInputBlock({ input: "https://assets.babylonjs.com/meshes/box.glb" });
+const deleteMaterials = new DeleteMaterialsBlock();
+const destination = new GltfOutputBlock();
+
+source.output.connectTo(deleteMaterials.input);
+deleteMaterials.output.connectTo(destination.input);
+
+const asset = new NodeAsset({
+    name: "material-free-gltf",
+    outputBlock: destination,
+});
+
+const result = await asset.executeAsync();
+```
+
+Like other glTF transforms, `DeleteMaterialsBlock` mutates and returns the input document. Geometry, vertex attributes, meshes, nodes, scenes, animations, and other unrelated content are preserved.
+
 # Encoding KTX2 textures
 
 `EncodeKTX2Block` infers encoding from material usage:
