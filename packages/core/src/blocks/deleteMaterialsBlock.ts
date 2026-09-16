@@ -66,7 +66,6 @@ function deleteMaterials(document: Document): Document {
     }
 
     materials.forEach((material) => material.dispose());
-    disposeOrphanedExtensionProperties(descendantExtensionProperties);
 
     if (hasMaterialVariants) {
         root.listExtensionsUsed()
@@ -74,16 +73,23 @@ function deleteMaterials(document: Document): Document {
             ?.dispose();
     }
 
-    for (const texture of candidateTextures) {
-        if (texture.listParents().every((parent) => parent === root)) {
-            const textureExtensionName = getTextureExtensionName(texture.getMimeType());
-            if (textureExtensionName !== undefined) {
-                affectedTextureExtensionNames.add(textureExtensionName);
+    let disposedResource = true;
+    while (disposedResource) {
+        disposedResource = disposeOrphanedExtensionProperties(descendantExtensionProperties);
+        for (const texture of candidateTextures) {
+            if (texture.isDisposed()) {
+                candidateTextures.delete(texture);
+            } else if (texture.listParents().every((parent) => parent === root)) {
+                const textureExtensionName = getTextureExtensionName(texture.getMimeType());
+                if (textureExtensionName !== undefined) {
+                    affectedTextureExtensionNames.add(textureExtensionName);
+                }
+                texture.setImage(null).setURI("").setMimeType("").dispose();
+                candidateTextures.delete(texture);
+                disposedResource = true;
             }
-            texture.setImage(null).setURI("").setMimeType("").dispose();
         }
     }
-    disposeOrphanedExtensionProperties(descendantExtensionProperties);
 
     for (const extension of root.listExtensionsUsed()) {
         const hasNoProperties = affectedExtensionNames.has(extension.extensionName) && extension.listProperties().length === 0;
@@ -96,7 +102,8 @@ function deleteMaterials(document: Document): Document {
     return document;
 }
 
-function disposeOrphanedExtensionProperties(properties: Set<ExtensionProperty>): void {
+function disposeOrphanedExtensionProperties(properties: Set<ExtensionProperty>): boolean {
+    let disposedAnyProperty = false;
     let disposedProperty = true;
     while (disposedProperty) {
         disposedProperty = false;
@@ -107,9 +114,11 @@ function disposeOrphanedExtensionProperties(properties: Set<ExtensionProperty>):
                 property.dispose();
                 properties.delete(property);
                 disposedProperty = true;
+                disposedAnyProperty = true;
             }
         }
     }
+    return disposedAnyProperty;
 }
 
 function getTextureExtensionName(mimeType: string): string | undefined {
