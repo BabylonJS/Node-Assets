@@ -1,15 +1,11 @@
 # Node Assets
 
-`@babylonjs/node-assets` is a graph-based library for preparing 3D assets for
-the web.
+A TypeScript library to help prepare 3D assets for the web, with converters & compressors included.
 
-> **Warning:** This package is experimental. Its API may change and is not
-> intended for production use.
+> **⚠️ Notice:** This package is experimental. API is subject to change and not intended for production use.
 
-See the [usage guide](https://github.com/BabylonJS/Node-Assets/blob/main/docs/usage.md)
-for examples and the
-[architecture notes](https://github.com/BabylonJS/Node-Assets/blob/main/docs/architecture/index.md)
-for implementation details.
+See the [usage guide](docs/usage.md) for examples. [Basics](docs/basics.md) and
+[blocks](docs/blocks.md) describe the implementation.
 
 ## Contributing
 

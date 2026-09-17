@@ -4,13 +4,17 @@ Guidance for coding agents working in this repository.
 
 ## What this is
 
+This is a monorepo containing multiple packages related to 3D asset processing.
+
 `@babylonjs/node-assets` is an experimental TypeScript library for reading many 3D source formats and producing web-ready formats. The package targets Node and browser environments and bundles all required converters and compressors.
+
+`@babylonjs/node-assets-cli` is a command-line interface for building and running pipelines with `@babylonjs/node-assets`.
 
 ## Getting started
 
 - Read [[CONTRIBUTING.md]] for setup and scripts.
-- Read [[docs/usage.md]] for user-facing behavior contracts.
-- Read [[docs/architecture/index.md]] for intended implementation details and more behavior contracts.
+- Read [[packages/core/docs/usage.md]] for user-facing behavior contracts.
+- Read [[packages/core/docs/basics.md]] and [[packages/core/docs/blocks.md]] for intended implementation details and more behavior contracts.
 
 ## Guidelines
 
@@ -21,7 +25,7 @@ Guidance for coding agents working in this repository.
 
 ## Planning
 
-- To propose a feature, first update or add the smallest task-focused guide, section, or note in [[docs/usage.md]].
+- To propose a feature, first update or add the smallest task-focused guide, section, or note in [[packages/core/docs/usage.md]].
 
 ## Style
 

@@ -51,25 +51,23 @@ export async function runCliAsync(args: string[]): Promise<void> {
 }
 
 function printHelp(): void {
-    const { inputs, outputs, transforms } = getPipelineDefinitions();
+    const { inputs, outputs, operations } = getPipelineDefinitions();
     console.log(
         [
-            "Usage: node-assets pipeline <input file> [...blocks] <output file>",
+            "Usage: node-assets pipeline <input> [operations...] <output>",
             "",
-            `Input extensions: ${inputs.flatMap(({ extensions }) => extensions).join(", ")}`,
-            `Output extensions: ${outputs.flatMap(({ extensions }) => extensions).join(", ")}`,
-            "Extensions are case-insensitive. Paths are local and relative to the working directory.",
+            `Supported file types:`,
+            `Input: ${inputs.flatMap(({ extensions }) => extensions).join(", ")}`,
+            `Output: ${outputs.flatMap(({ extensions }) => extensions).join(", ")}`,
+            "Paths are local and relative to the working directory.",
             "",
-            "Blocks (case-sensitive, applied in order, repetitions allowed):",
-            ...transforms.map(({ name, description }) => `  ${name.padEnd(9)}${description}`),
+            "Operations:",
+            ...operations.map(({ name, description }) => `  ${name.padEnd(9)}${description}`),
             "",
             "Options:",
             "  -h, --help     Show this help",
             "  -v, --version  Show the CLI version",
             "  --            End options before hyphen-prefixed paths",
-            "",
-            "With no blocks, the input connects directly to the output.",
-            "The output parent must exist. Existing files are never overwritten.",
             "",
             "Example: node-assets pipeline input.gltf ktx2 draco output.glb",
         ].join("\n")

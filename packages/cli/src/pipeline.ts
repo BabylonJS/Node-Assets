@@ -16,7 +16,7 @@ export function getPipelineDefinitions() {
                 create: (library: typeof NodeAssets) => new library.GltfOutputBlock(),
             },
         ],
-        transforms: [
+        operations: [
             {
                 name: "draco",
                 description: "Compress geometry with Draco",
@@ -55,9 +55,9 @@ export async function createPipelineAsync({ inputPath, outputPath, blockNames }:
         throw new Error(`Unsupported output extension "${outputExtension}".`);
     }
     const transforms = blockNames.map((name) => {
-        const definition = definitions.transforms.find((block) => block.name === name);
+        const definition = definitions.operations.find((block) => block.name === name);
         if (definition === undefined) {
-            throw new Error(`Unknown block "${name}".`);
+            throw new Error(`Unknown operation "${name}".`);
         }
         return definition;
     });
