@@ -1,4 +1,4 @@
-import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -38,7 +38,7 @@ describe("Node Assets CLI", () => {
         const result = await runNodeAsync([launcher, ...args], directory);
         expect(result.code).toBe(0);
         expect(result.stderr).toBe("");
-        for (const term of ["pipeline", ".gltf", ".glb", "draco", "meshopt", "ktx2"]) {
+        for (const term of ["pipeline", ".gltf", ".glb", "draco", "meshopt", "ktx2", "--stats", "--benchmark"]) {
             expect(result.stdout).toContain(term);
         }
     });
@@ -80,11 +80,54 @@ describe("Node Assets CLI", () => {
         const output = join(directory, `roundtrip-${extension}.glb`);
         const result = await runNodeAsync([launcher, "pipeline", `input.${extension}`, output], directory);
         expect(result.code).toBe(0);
+        expect(result.stdout).not.toContain("Stats:");
+        expect(result.stdout).not.toContain("Benchmark:");
         const document = await new NodeIO().read(output);
         expect(document.getRoot().listMeshes()[0]?.listPrimitives()[0]?.getAttribute("POSITION")?.getArray()).toEqual(new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]));
         const parsed = await readGlbAsync(output);
         expect(parsed.json.extensionsUsed ?? []).not.toContain("KHR_draco_mesh_compression");
         expect(parsed.json.extensionsUsed ?? []).not.toContain("EXT_meshopt_compression");
+    });
+
+    it.each([
+        { extension: "gltf", flags: ["--stats"] },
+        { extension: "glb", flags: ["--stats"] },
+        { extension: "glb", flags: ["--benchmark"] },
+        { extension: "glb", flags: ["--stats", "--benchmark"] },
+    ])("reports requested metrics for $extension with $flags", async ({ extension, flags }) => {
+        const source = join(directory, `input.${extension}`);
+        const output = join(directory, `report-${extension}-${flags.join("-")}.glb`);
+        const result = await runNodeAsync([launcher, "pipeline", source, "draco", output, ...flags], directory);
+        expect(result.code).toBe(0);
+        expect(result.stderr).toBe("");
+        expect((await readGlbAsync(output)).json.extensionsUsed).toContain("KHR_draco_mesh_compression");
+        expect(result.stdout).toContain(`Wrote ${output}`);
+
+        if (flags.includes("--stats")) {
+            expect(result.stdout).toContain(`Stats:\n  Total size before: ${(await stat(source)).size} bytes\n  Total size after: ${(await stat(output)).size} bytes`);
+        } else {
+            expect(result.stdout).not.toContain("Stats:");
+        }
+
+        if (flags.includes("--benchmark")) {
+            expect(result.stdout).toContain("Benchmark:");
+            for (const label of ["Completion time", "CPU time (user)", "CPU time (system)"]) {
+                const line = result.stdout.split("\n").find((line) => line.startsWith(`  ${label}: `));
+                expect(line).toMatch(/: \d+\.\d{2} ms$/u);
+                const value = Number(line?.split(": ")[1]?.split(" ")[0]);
+                expect(value).toBeGreaterThanOrEqual(0);
+                if (label === "Completion time") {
+                    expect(value).toBeGreaterThan(0);
+                }
+            }
+            for (const label of ["RSS", "Peak RSS (process lifetime)", "Heap used"]) {
+                const line = result.stdout.split("\n").find((line) => line.startsWith(`  ${label}: `));
+                expect(line).toMatch(/: \d+ bytes$/u);
+                expect(Number(line?.split(": ")[1]?.split(" ")[0])).toBeGreaterThan(0);
+            }
+        } else {
+            expect(result.stdout).not.toContain("Benchmark:");
+        }
     });
 
     it("resolves sibling glTF resources from the input path", async () => {
@@ -182,13 +225,16 @@ describe("Node Assets CLI", () => {
         60_000
     );
 
-    it("does not overwrite an existing destination", async () => {
-        const output = join(directory, "existing.glb");
+    it.each([[], ["--stats", "--benchmark"]].map((flags) => ({ flags })))("does not overwrite an existing destination with $flags", async ({ flags }) => {
+        const output = join(directory, `existing-${flags.join("-")}.glb`);
         const original = Buffer.from("keep this file");
         await writeFile(output, original);
-        const result = await runNodeAsync([launcher, "pipeline", input, output], directory);
+        const result = await runNodeAsync([launcher, ...flags, "pipeline", input, output], directory);
         expect(result.code).toBe(1);
         expect(result.stderr.trim()).not.toBe("");
+        expect(result.stdout).not.toContain("Wrote ");
+        expect(result.stdout).not.toContain("Stats:");
+        expect(result.stdout).not.toContain("Benchmark:");
         expect(await readFile(output)).toEqual(original);
     });
 

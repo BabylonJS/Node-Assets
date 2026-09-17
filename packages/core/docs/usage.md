@@ -16,6 +16,22 @@ const asset = new NodeAsset({
 const result = await asset.executeAsync();
 ```
 
+# Example: CLI run reports
+
+```sh
+node-assets pipeline input.glb draco output.glb --stats --benchmark
+```
+
+Both flags are optional and can be used independently. `--stats` reports the total
+size before and after in bytes, comparing the named input file with the written
+output file. External buffers and images referenced by a glTF input are not
+included in the input file size.
+
+`--benchmark` reports elapsed time and CPU time for pipeline creation, execution,
+output writing, and disposal. It also reports process RSS and heap usage at
+completion, plus peak RSS over the process lifetime. Reports are printed only
+after a successful run. See the [CLI guide](../../cli/README.md) for command syntax.
+
 # Example: Compressing GLB
 
 Same as before, but now add KTX2 texture encoding and Draco geometry encoding.
