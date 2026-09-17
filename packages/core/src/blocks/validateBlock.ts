@@ -33,11 +33,15 @@ const ValidateBlockDefinition = /* @__PURE__ */ defineBlock({
             },
         });
 
-        const diagnostics = formatIssues(report.issues.messages);
+        let separator = "";
         if (report.issues.numErrors === 0) {
-            diagnostics.unshift(`\u2705 ${uri} is valid`);
+            console.log(`\u2705 ${uri} is valid`);
+            separator = "\n";
         }
-        console.log(diagnostics.join("\n\n"));
+        for (const diagnostic of formatIssues(report.issues.messages)) {
+            console.log(separator + diagnostic);
+            separator = "\n";
+        }
 
         if (report.issues.numErrors > 0) {
             throw new Error(`glTF validation failed for "${uri}" with ${report.issues.numErrors} error(s).`);
@@ -56,9 +60,10 @@ export class ValidateBlock extends Block<typeof ValidateBlockDefinition> {
     }
 }
 
-function formatIssues(issues: readonly ValidationIssue[]): string[] {
+function* formatIssues(issues: readonly ValidationIssue[]): Generator<string> {
     const groups = new Map<string, { issue: ValidationIssue; locations: string[] }>();
-    for (const issue of [...issues].reverse()) {
+    for (let index = issues.length - 1; index >= 0; index--) {
+        const issue = issues[index]!;
         const key = JSON.stringify([issue.severity, issue.code, issue.message]);
         let group = groups.get(key);
         if (group === undefined) {
@@ -71,10 +76,8 @@ function formatIssues(issues: readonly ValidationIssue[]): string[] {
             group.locations.push(`  at byte ${issue.offset}`);
         }
     }
-    return [...groups.values()]
-        .sort((a, b) => a.issue.severity - b.issue.severity)
-        .map(({ issue, locations }) => {
-            const label = issue.severity === 0 ? "Error" : issue.severity === 3 ? "Hint" : "Warning";
-            return [`[${label}] ${issue.message}`, ...locations].join("\n");
-        });
+    for (const { issue, locations } of [...groups.values()].sort((a, b) => a.issue.severity - b.issue.severity)) {
+        const label = issue.severity === 0 ? "Error" : issue.severity === 3 ? "Hint" : "Warning";
+        yield `[${label}] ${issue.message}${locations.length > 0 ? "\n" + locations.join("\n") : ""}`;
+    }
 }

@@ -35,9 +35,6 @@ importers:
       globals:
         specifier: ^17.7.0
         version: 17.11.0
-      gltf-validator:
-        specifier: 2.0.0-dev.3.10
-        version: 2.0.0-dev.3.10
       prettier:
         specifier: ^3.9.6
         version: 3.9.6
