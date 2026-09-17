@@ -104,7 +104,7 @@ describe("Node Assets CLI", () => {
         expect(result.stdout).toContain(`Wrote ${output}`);
 
         if (flags.includes("--stats")) {
-            expect(result.stdout).toContain(`Stats:\n  Total size before: ${(await stat(source)).size} bytes\n  Total size after: ${(await stat(output)).size} bytes`);
+            expect(result.stdout).toContain(`Stats:\n  Total size before: ${(await stat(source)).size} B\n  Total size after: ${(await stat(output)).size} B`);
         } else {
             expect(result.stdout).not.toContain("Stats:");
         }
@@ -122,12 +122,44 @@ describe("Node Assets CLI", () => {
             }
             for (const label of ["RSS", "Peak RSS (process lifetime)", "Heap used"]) {
                 const line = result.stdout.split("\n").find((line) => line.startsWith(`  ${label}: `));
-                expect(line).toMatch(/: \d+ bytes$/u);
+                expect(line).toMatch(/: (?:\d+ B|\d+\.\d{2} (?:KiB|MiB|GiB|TiB|PiB))$/u);
                 expect(Number(line?.split(": ")[1]?.split(" ")[0])).toBeGreaterThan(0);
+                expect(Number(line?.split(": ")[1]?.split(" ")[0])).toBeLessThan(1_024);
             }
         } else {
             expect(result.stdout).not.toContain("Benchmark:");
         }
+    });
+
+    it.each([
+        { bytes: 1_023, expected: "1023 B" },
+        { bytes: 1_024, expected: "1.00 KiB" },
+        { bytes: 1_536, expected: "1.50 KiB" },
+        { bytes: 1_048_575, expected: "1.00 MiB" },
+        { bytes: 1_048_576, expected: "1.00 MiB" },
+        { bytes: 1_310_720, expected: "1.25 MiB" },
+    ])("formats input sizes of $bytes bytes as $expected", async ({ bytes, expected }) => {
+        const source = join(directory, `size-${bytes}.gltf`);
+        const output = join(directory, `size-${bytes}.glb`);
+        await writeFile(source, generateGltfJson().padEnd(bytes, " "));
+
+        const result = await runNodeAsync([launcher, "pipeline", source, output, "--stats"], directory);
+        expect(result.code).toBe(0);
+        expect(result.stdout).toContain(`Total size before: ${expected}`);
+        expect(result.stdout).toContain(`Total size after: ${(await stat(output)).size} B`);
+    });
+
+    it("formats output sizes in larger units", async () => {
+        const source = join(directory, "large-output.gltf");
+        const output = join(directory, "large-output.glb");
+        await writeFile(source, JSON.stringify({ asset: { version: "2.0" }, extras: { label: "x".repeat(2_048) } }));
+
+        const result = await runNodeAsync([launcher, "pipeline", source, output, "--stats"], directory);
+        expect(result.code).toBe(0);
+        const outputBytes = (await stat(output)).size;
+        expect(outputBytes).toBeGreaterThan(1_024);
+        expect(outputBytes).toBeLessThan(1_048_576);
+        expect(result.stdout).toContain(`Total size after: ${(outputBytes / 1_024).toFixed(2)} KiB`);
     });
 
     it("resolves sibling glTF resources from the input path", async () => {

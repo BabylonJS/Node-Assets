@@ -43,7 +43,7 @@ file has been written successfully. Without these flags, no run report is printe
 
 | Flag          | Report |
 | ------------- | ------ |
-| `--stats`     | Total size before and after, in bytes, for the named input and output files. |
+| `--stats`     | Total size before and after for the named input and output files. |
 | `--benchmark` | Completion time, user and system CPU time, RSS, peak RSS, and heap used. |
 
 Size statistics compare serialized file sizes, not decoded asset sizes. The input
@@ -54,7 +54,11 @@ output writing, and disposal, but excludes argument parsing, input validation, a
 report printing. CPU times are process-wide and may include worker threads. RSS
 (resident set size) and heap used are process-wide snapshots at completion; peak
 RSS is the process-lifetime high-water mark, not a per-pipeline memory delta.
-Times are reported in milliseconds and memory in bytes.
+Times are reported in milliseconds. File sizes and memory automatically use
+1024-based units (B, KiB, MiB, GiB, TiB, PiB). Bytes remain whole numbers; larger
+units are rounded to two decimal places. Values that round up to 1024 advance
+to the next unit. For example, 2,088 bytes displays as `2.04 KiB`, and
+116,441,088 bytes displays as `111.05 MiB`.
 
 ## Develop locally
 

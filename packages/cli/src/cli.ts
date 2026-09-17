@@ -4,6 +4,7 @@ import { parseArgs } from "node:util";
 
 import { version } from "../package.json";
 import { startBenchmark } from "./benchmark";
+import { formatBytes } from "./formatBytes";
 import { createPipelineAsync, getPipelineDefinitions } from "./pipeline";
 
 export async function runCliAsync(args: string[]): Promise<void> {
@@ -58,7 +59,7 @@ export async function runCliAsync(args: string[]): Promise<void> {
 
     console.log(`Wrote ${outputPath}`);
     if (values.stats) {
-        console.log(`Stats:\n  Total size before: ${inputFile.size} bytes\n  Total size after: ${outputSize} bytes`);
+        console.log(`Stats:\n  Total size before: ${formatBytes(inputFile.size)}\n  Total size after: ${formatBytes(outputSize)}`);
     }
     if (benchmarkReport !== undefined) {
         console.log(benchmarkReport);
@@ -82,7 +83,7 @@ function printHelp(): void {
             "Options:",
             "  -h, --help     Show this help",
             "  -v, --version  Show the CLI version",
-            "  --stats       Show named input/output file sizes in bytes",
+            "  --stats       Show named input/output file sizes in readable units",
             "  --benchmark   Show completion time, CPU time, RSS, and heap usage",
             "  --            End options before hyphen-prefixed paths",
             "",

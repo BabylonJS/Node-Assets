@@ -13,9 +13,10 @@ export function startBenchmark(): () => string {
             `  Completion time: ${elapsedMilliseconds.toFixed(2)} ms`,
             `  CPU time (user): ${(cpuUsage.user / 1_000).toFixed(2)} ms`,
             `  CPU time (system): ${(cpuUsage.system / 1_000).toFixed(2)} ms`,
-            `  RSS: ${memoryUsage.rss} bytes`,
-            `  Peak RSS (process lifetime): ${resourceUsage.maxRSS * 1_024} bytes`,
-            `  Heap used: ${memoryUsage.heapUsed} bytes`,
+            `  RSS: ${formatBytes(memoryUsage.rss)}`,
+            `  Peak RSS (process lifetime): ${formatBytes(resourceUsage.maxRSS * 1_024)}`,
+            `  Heap used: ${formatBytes(memoryUsage.heapUsed)}`,
         ].join("\n");
     };
 }
+import { formatBytes } from "./formatBytes";

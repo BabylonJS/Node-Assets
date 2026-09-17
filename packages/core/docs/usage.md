@@ -23,14 +23,17 @@ node-assets pipeline input.glb draco output.glb --stats --benchmark
 ```
 
 Both flags are optional and can be used independently. `--stats` reports the total
-size before and after in bytes, comparing the named input file with the written
+size before and after, comparing the named input file with the written
 output file. External buffers and images referenced by a glTF input are not
 included in the input file size.
 
 `--benchmark` reports elapsed time and CPU time for pipeline creation, execution,
 output writing, and disposal. It also reports process RSS and heap usage at
 completion, plus peak RSS over the process lifetime. Reports are printed only
-after a successful run. See the [CLI guide](../../cli/README.md) for command syntax.
+after a successful run. File sizes and memory are automatically scaled to
+1024-based units (B, KiB, MiB, GiB, TiB, PiB), with two decimal places for units
+above bytes. Rounding up to 1024 advances to the next unit.
+See the [CLI guide](../../cli/README.md) for command syntax.
 
 # Example: Compressing GLB
 
