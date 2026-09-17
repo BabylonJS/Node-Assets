@@ -1,75 +1,29 @@
 {
-    "name": "@babylonjs/node-assets",
-    "version": "0.1.0",
+    "name": "node-assets-workspace",
+    "private": true,
     "license": "Apache-2.0",
-    "type": "module",
-    "sideEffects": false,
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "exports": {
-        ".": {
-            "types": "./dist/index.d.ts",
-            "import": "./dist/index.js"
-        },
-        "./package.json": "./package.json"
-    },
-    "files": [
-        "dist"
-    ],
-    "keywords": [
-        "babylon",
-        "babylonjs",
-        "3d",
-        "gltf",
-        "glb",
-        "asset-pipeline",
-        "draco",
-        "meshopt",
-        "ktx2"
-    ],
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/BabylonJS/Node-Assets.git"
-    },
-    "bugs": {
-        "url": "https://github.com/BabylonJS/Node-Assets/issues"
-    },
-    "homepage": "https://github.com/BabylonJS/Node-Assets#readme",
     "engines": {
         "node": "^20.19.0 || ^22.13.0 || >=24"
     },
     "packageManager": "pnpm@11.9.0",
-    "publishConfig": {
-        "access": "public"
-    },
     "scripts": {
-        "build": "pnpm build:library && pnpm --filter @babylonjs/node-assets-cli build",
-        "build:library": "vite build",
+        "build": "pnpm --filter @babylonjs/node-assets build && pnpm --filter @babylonjs/node-assets-cli build",
+        "build:core": "pnpm --filter @babylonjs/node-assets build",
         "cli": "node packages/cli/bin/node-assets.cjs",
         "typecheck": "tsc -p tsconfig.json --noEmit",
         "lint": "eslint . && pnpm typecheck",
         "lint:fix": "eslint . --fix",
-        "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\" \"*.config.ts\" \"*.config.mjs\" \"packages/cli/**/*.{ts,cjs}\"",
-        "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\" \"*.config.ts\" \"*.config.mjs\" \"packages/cli/**/*.{ts,cjs}\"",
+        "format": "prettier --write \"packages/**/*.{ts,cjs}\" \"tests/**/*.ts\" \"*.config.ts\" \"*.config.mjs\"",
+        "format:check": "prettier --check \"packages/**/*.{ts,cjs}\" \"tests/**/*.ts\" \"*.config.ts\" \"*.config.mjs\"",
         "test": "vitest run",
         "test:watch": "vitest",
-        "typedocs": "typedoc"
-    },
-    "dependencies": {
-        "@babylonjs/core": "^9.21.2",
-        "@babylonjs/loaders": "^9.21.2",
-        "@babylonjs/serializers": "^9.21.2",
-        "@gltf-transform/core": "4.5.0",
-        "@gltf-transform/extensions": "4.5.0",
-        "@gltf-transform/functions": "4.5.0",
-        "@types/draco3dgltf": "1.4.3",
-        "babylonpress-ktx2-encoder": "0.6.0",
-        "draco3dgltf": "1.5.7",
-        "meshoptimizer": "1.2.0",
-        "sharp": "0.35.4"
+        "typedocs": "pnpm --filter @babylonjs/node-assets typedocs"
     },
     "devDependencies": {
+        "@babylonjs/node-assets": "workspace:*",
         "@eslint/js": "^10.0.1",
+        "@gltf-transform/core": "4.5.0",
+        "@gltf-transform/extensions": "4.5.0",
         "@types/node": "^26.1.1",
         "eslint": "^10.7.0",
         "eslint-config-prettier": "^10.1.8",

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { GltfOutputBlock, NodeAsset, NodeAssetContext, StlInputBlock } from "../../src/index";
+import { GltfOutputBlock, NodeAsset, NodeAssetContext, StlInputBlock } from "../../packages/core/src/index";
 import { parseGlbAsync } from "../helpers/glb";
 import { generateBinaryStlData, generateStlData, generateStlDataUri } from "../helpers/stl";
 

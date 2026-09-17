@@ -14,9 +14,9 @@ pnpm install
 pnpm build
 ```
 
-The library remains at the repository root; `packages/cli` is a separate pnpm
-workspace package that depends on it. Build both packages before running the
-local CLI:
+The `packages/core` workspace contains the `@babylonjs/node-assets` library.
+`packages/cli` contains the command-line package and depends on the core package.
+Build both before running the local CLI:
 
 ```sh
 pnpm cli pipeline input.gltf ktx2 draco output.glb
@@ -32,7 +32,7 @@ pnpm format        # Write Prettier formatting
 pnpm test          # Run Vitest
 pnpm test:watch    # Run Vitest in watch mode
 pnpm build         # Build the library, then the CLI
-pnpm build:library # Build only the library into dist/
+pnpm build:core    # Build only the library into packages/core/dist/
 pnpm cli           # Run the built CLI (append pipeline arguments)
 pnpm typedocs      # Generate the TypeDoc API reference
 ```

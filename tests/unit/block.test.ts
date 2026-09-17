@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { Block } from "../../src/blocks/block";
-import { defineBlock, value } from "../../src/blocks/blockDefinition";
-import { NodeAsset } from "../../src/nodeAsset";
+import { Block } from "../../packages/core/src/blocks/block";
+import { defineBlock, value } from "../../packages/core/src/blocks/blockDefinition";
+import { NodeAsset } from "../../packages/core/src/nodeAsset";
 import { ScaleDefinition, NumberDefinition, OtherNumberDefinition, NumberType } from "../helpers/numberBlocks";
 
 describe("Block class", () => {

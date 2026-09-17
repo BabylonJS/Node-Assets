@@ -7,44 +7,19 @@ settings:
 importers:
 
   .:
-    dependencies:
-      '@babylonjs/core':
-        specifier: ^9.21.2
-        version: 9.21.2
-      '@babylonjs/loaders':
-        specifier: ^9.21.2
-        version: 9.21.2(@babylonjs/core@9.21.2)(babylonjs-gltf2interface@9.21.2)
-      '@babylonjs/serializers':
-        specifier: ^9.21.2
-        version: 9.21.2(@babylonjs/core@9.21.2)(babylonjs-gltf2interface@9.21.2)
+    devDependencies:
+      '@babylonjs/node-assets':
+        specifier: workspace:*
+        version: link:packages/core
+      '@eslint/js':
+        specifier: ^10.0.1
+        version: 10.0.1(eslint@10.8.1)
       '@gltf-transform/core':
         specifier: 4.5.0
         version: 4.5.0
       '@gltf-transform/extensions':
         specifier: 4.5.0
         version: 4.5.0
-      '@gltf-transform/functions':
-        specifier: 4.5.0
-        version: 4.5.0(@types/node@26.2.0)
-      '@types/draco3dgltf':
-        specifier: 1.4.3
-        version: 1.4.3
-      babylonpress-ktx2-encoder:
-        specifier: 0.6.0
-        version: 0.6.0
-      draco3dgltf:
-        specifier: 1.5.7
-        version: 1.5.7
-      meshoptimizer:
-        specifier: 1.2.0
-        version: 1.2.0
-      sharp:
-        specifier: 0.35.4
-        version: 0.35.4(@types/node@26.2.0)
-    devDependencies:
-      '@eslint/js':
-        specifier: ^10.0.1
-        version: 10.0.1(eslint@10.8.1)
       '@types/node':
         specifier: ^26.1.1
         version: 26.2.0
@@ -86,7 +61,43 @@ importers:
     dependencies:
       '@babylonjs/node-assets':
         specifier: workspace:*
-        version: link:../..
+        version: link:../core
+
+  packages/core:
+    dependencies:
+      '@babylonjs/core':
+        specifier: ^9.21.2
+        version: 9.21.2
+      '@babylonjs/loaders':
+        specifier: ^9.21.2
+        version: 9.21.2(@babylonjs/core@9.21.2)(babylonjs-gltf2interface@9.21.2)
+      '@babylonjs/serializers':
+        specifier: ^9.21.2
+        version: 9.21.2(@babylonjs/core@9.21.2)(babylonjs-gltf2interface@9.21.2)
+      '@gltf-transform/core':
+        specifier: 4.5.0
+        version: 4.5.0
+      '@gltf-transform/extensions':
+        specifier: 4.5.0
+        version: 4.5.0
+      '@gltf-transform/functions':
+        specifier: 4.5.0
+        version: 4.5.0(@types/node@26.2.0)
+      '@types/draco3dgltf':
+        specifier: 1.4.3
+        version: 1.4.3
+      babylonpress-ktx2-encoder:
+        specifier: 0.6.0
+        version: 0.6.0
+      draco3dgltf:
+        specifier: 1.5.7
+        version: 1.5.7
+      meshoptimizer:
+        specifier: 1.2.0
+        version: 1.2.0
+      sharp:
+        specifier: 0.35.4
+        version: 0.35.4(@types/node@26.2.0)
 
 packages:
 

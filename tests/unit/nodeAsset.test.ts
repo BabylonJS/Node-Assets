@@ -1,9 +1,9 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 
-import { Block } from "../../src/blocks/block";
-import { defineBlock, defineSourceBlock } from "../../src/blocks/blockDefinition";
-import { NodeAsset, NodeAssetContext } from "../../src/index";
-import type { Resource } from "../../src/resources/resource";
+import { Block } from "../../packages/core/src/blocks/block";
+import { defineBlock, defineSourceBlock } from "../../packages/core/src/blocks/blockDefinition";
+import { NodeAsset, NodeAssetContext } from "../../packages/core/src/index";
+import type { Resource } from "../../packages/core/src/resources/resource";
 import { ScaleDefinition, NumberDefinition } from "../helpers/numberBlocks";
 
 describe("NodeAsset", () => {

@@ -6,7 +6,7 @@ import { NodeIO } from "@gltf-transform/core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import cliPackage from "../../packages/cli/package.json";
-import { EncodeDracoBlock, EncodeKTX2Block, EncodeMeshoptBlock, GltfInputBlock, GltfOutputBlock, NodeAsset } from "../../src/index";
+import { EncodeDracoBlock, EncodeKTX2Block, EncodeMeshoptBlock, GltfInputBlock, GltfOutputBlock, NodeAsset } from "../../packages/core/src/index";
 import { buildCliFixtureAsync, runNodeAsync } from "../helpers/cli";
 import { expectKtx2Image, parseGlbAsync } from "../helpers/glb";
 import { generateGlbDataUri, generateGltfJson, generateTexturedGltfJson } from "../helpers/gltf";
@@ -18,7 +18,7 @@ describe("Node Assets CLI", () => {
     let texturedInput: string;
 
     beforeAll(async () => {
-        directory = await mkdtemp(fileURLToPath(new URL("../../node_modules/.node-assets-cli-", import.meta.url)));
+        directory = await mkdtemp(fileURLToPath(new URL("../../packages/core/node_modules/.node-assets-cli-", import.meta.url)));
         launcher = await buildCliFixtureAsync(directory);
         input = join(directory, "input.gltf");
         texturedInput = join(directory, "textured.gltf");

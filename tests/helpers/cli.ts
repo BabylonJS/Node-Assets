@@ -6,14 +6,14 @@ import { fileURLToPath } from "node:url";
 import { build } from "vite";
 
 import cliPackage from "../../packages/cli/package.json";
-import libraryConfig from "../../vite.config";
+import libraryConfig from "../../packages/core/vite.config";
 
 export async function buildCliFixtureAsync(directory: string): Promise<string> {
     const libraryDirectory = join(directory, "node_modules", "@babylonjs", "node-assets");
     const cliDirectory = join(directory, "node_modules", "@babylonjs", "node-assets-cli");
     await mkdir(libraryDirectory, { recursive: true });
     await mkdir(cliDirectory, { recursive: true });
-    await cp(new URL("../../package.json", import.meta.url), join(libraryDirectory, "package.json"));
+    await cp(new URL("../../packages/core/package.json", import.meta.url), join(libraryDirectory, "package.json"));
     await cp(new URL("../../packages/cli/package.json", import.meta.url), join(cliDirectory, "package.json"));
     await cp(new URL("../../packages/cli/bin", import.meta.url), join(cliDirectory, "bin"), { recursive: true });
 

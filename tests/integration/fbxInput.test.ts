@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { FbxInputBlock, GltfOutputBlock, NodeAsset, NodeAssetContext } from "../../src/index";
+import { FbxInputBlock, GltfOutputBlock, NodeAsset, NodeAssetContext } from "../../packages/core/src/index";
 import { generateBinaryFbxData, generateFbxData, generateFbxDataUri, generateTexturedFbxDataWithUvs, generateTgaTextureData } from "../helpers/fbx";
 import { parseGlbAsync } from "../helpers/glb";
 
