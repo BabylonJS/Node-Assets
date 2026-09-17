@@ -1,4 +1,4 @@
-import { formatBytes } from "./formatBytes";
+import { createDurationFormatter, formatBytes } from "./format";
 
 export function startBenchmark(): () => string {
     const startedAt = process.hrtime.bigint();
@@ -9,12 +9,13 @@ export function startBenchmark(): () => string {
         const cpuUsage = process.cpuUsage(initialCpuUsage);
         const memoryUsage = process.memoryUsage();
         const resourceUsage = process.resourceUsage();
+        const formatDuration = createDurationFormatter(elapsedMilliseconds);
 
         return [
             "Benchmark:",
-            `  Completion time: ${elapsedMilliseconds.toFixed(2)} ms`,
-            `  CPU time (user): ${(cpuUsage.user / 1_000).toFixed(2)} ms`,
-            `  CPU time (system): ${(cpuUsage.system / 1_000).toFixed(2)} ms`,
+            `  Completion time: ${formatDuration(elapsedMilliseconds)}`,
+            `  CPU time (user): ${formatDuration(cpuUsage.user / 1_000)}`,
+            `  CPU time (system): ${formatDuration(cpuUsage.system / 1_000)}`,
             `  RSS: ${formatBytes(memoryUsage.rss)}`,
             `  Peak RSS (process lifetime): ${formatBytes(resourceUsage.maxRSS * 1_024)}`,
             `  Heap used: ${formatBytes(memoryUsage.heapUsed)}`,

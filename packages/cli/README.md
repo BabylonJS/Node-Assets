@@ -54,11 +54,18 @@ output writing, and disposal, but excludes argument parsing, input validation, a
 report printing. CPU times are process-wide and may include worker threads. RSS
 (resident set size) and heap used are process-wide snapshots at completion; peak
 RSS is the process-lifetime high-water mark, not a per-pipeline memory delta.
-Times are reported in milliseconds. File sizes and memory automatically use
-1024-based units (B, KiB, MiB, GiB, TiB, PiB). Bytes remain whole numbers; larger
-units are rounded to two decimal places. Values that round up to 1024 advance
-to the next unit. For example, 2,088 bytes displays as `2.04 KiB`, and
-116,441,088 bytes displays as `111.05 MiB`.
+
+The total size before selects a shared unit for both size totals, using
+1024-based units (B, KiB, MiB, GiB, TiB, PiB). Memory values scale independently.
+Bytes remain whole numbers; larger units use two decimal places. For example,
+2,088 bytes before and 776 bytes after display as `2.04 KiB` and `0.76 KiB`.
+
+Completion time selects a shared unit for all timing rows: milliseconds (`ms`),
+seconds (`s`), minutes (`min`), or hours (`h`), with two decimal places. For
+example, a 2,538.93 ms run displays as `2.54 s`, and 115.06 ms of system CPU time
+displays as `0.12 s`. Size and time unit selection advances to the next unit when
+rounding reaches its boundary. The selected unit is kept for the other rows,
+even when their values would otherwise use a different unit.
 
 ## Develop locally
 

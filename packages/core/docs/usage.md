@@ -30,9 +30,11 @@ included in the input file size.
 `--benchmark` reports elapsed time and CPU time for pipeline creation, execution,
 output writing, and disposal. It also reports process RSS and heap usage at
 completion, plus peak RSS over the process lifetime. Reports are printed only
-after a successful run. File sizes and memory are automatically scaled to
-1024-based units (B, KiB, MiB, GiB, TiB, PiB), with two decimal places for units
-above bytes. Rounding up to 1024 advances to the next unit.
+after a successful run. The total size before selects the unit for both size
+totals, using 1024-based units (B, KiB, MiB, GiB, TiB, PiB). Completion time selects
+the unit for all timing rows (ms, s, min, h). Memory values scale independently.
+Times and sizes above bytes use two decimal places; bytes remain whole numbers.
+Unit selection advances to the next unit when rounding reaches its boundary.
 See the [CLI guide](../../cli/README.md) for command syntax.
 
 # Example: Compressing GLB

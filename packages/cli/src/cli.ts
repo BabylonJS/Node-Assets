@@ -4,7 +4,7 @@ import { parseArgs } from "node:util";
 
 import { version } from "../package.json";
 import { startBenchmark } from "./benchmark";
-import { formatBytes } from "./formatBytes";
+import { createByteFormatter } from "./format";
 import { createPipelineAsync, getPipelineDefinitions } from "./pipeline";
 
 export async function runCliAsync(args: string[]): Promise<void> {
@@ -59,7 +59,8 @@ export async function runCliAsync(args: string[]): Promise<void> {
 
     console.log(`Wrote ${outputPath}`);
     if (values.stats) {
-        console.log(`Stats:\n  Total size before: ${formatBytes(inputFile.size)}\n  Total size after: ${formatBytes(outputSize)}`);
+        const formatSize = createByteFormatter(inputFile.size);
+        console.log(`Stats:\n  Total size before: ${formatSize(inputFile.size)}\n  Total size after: ${formatSize(outputSize)}`);
     }
     if (benchmarkReport !== undefined) {
         console.log(benchmarkReport);
