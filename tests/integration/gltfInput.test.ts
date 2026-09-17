@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { GltfInputBlock, NodeAsset, NodeAssetContext } from "../../src/index";
+import { GltfInputBlock, NodeAsset, NodeAssetContext } from "../../packages/core/src/index";
 import { decodeDataUri, generateGlbDataUri, generateGltfJson } from "../helpers/gltf";
 
 describe("glTF input", () => {

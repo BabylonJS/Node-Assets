@@ -14,6 +14,15 @@ pnpm install
 pnpm build
 ```
 
+The `packages/core` workspace contains the `@babylonjs/node-assets` library.
+`packages/cli` contains the command-line package and depends on the core package.
+Build both before running the local CLI:
+
+```sh
+pnpm cli pipeline input.gltf ktx2 draco output.glb
+pnpm cli --help
+```
+
 ## Scripts
 
 ```sh
@@ -22,8 +31,17 @@ pnpm lint:fix      # ESLint autofix
 pnpm format        # Write Prettier formatting
 pnpm test          # Run Vitest
 pnpm test:watch    # Run Vitest in watch mode
-pnpm build         # Build with Vite and emit dist/
+pnpm build         # Build the library, then the CLI
+pnpm build:core    # Build only the library into packages/core/dist/
+pnpm cli           # Run the built CLI (append pipeline arguments)
 pnpm typedocs      # Generate the TypeDoc API reference
+```
+
+The shared lint, format, and typecheck commands cover both packages. CLI tests
+live in `tests/e2e/cli.test.ts` and build isolated package fixtures:
+
+```sh
+pnpm test tests/e2e/cli.test.ts
 ```
 
 Make sure you've run `pnpm lint`, `pnpm test`, and `pnpm build` before opening a pull request.

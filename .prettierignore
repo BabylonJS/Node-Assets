@@ -1,5 +1,5 @@
 dist/
 node_modules/
 test-results/
-docs/typedocs
+packages/core/docs/typedocs
 pnpm-lock.yaml

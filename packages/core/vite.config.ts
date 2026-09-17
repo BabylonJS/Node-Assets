@@ -1,4 +1,5 @@
 import { isBuiltin } from "node:module";
+import { fileURLToPath } from "node:url";
 
 import { defineConfig, type Plugin } from "vite";
 import dts from "vite-plugin-dts";
@@ -6,6 +7,7 @@ import dts from "vite-plugin-dts";
 const EmptyNodeBuiltinModuleId = "\0node-assets-empty-node-builtin";
 
 export default defineConfig({
+    root: fileURLToPath(new URL(".", import.meta.url)),
     base: "./",
     build: {
         target: "es2022",

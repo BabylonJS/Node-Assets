@@ -1,6 +1,6 @@
 import { describe, it, vi } from "vitest";
 
-import { GltfInputBlock, GltfOutputBlock, NodeAsset } from "../../src/index";
+import { GltfInputBlock, GltfOutputBlock, NodeAsset } from "../../packages/core/src/index";
 import { parseGlbAsync } from "../helpers/glb";
 import { generateGltfJson } from "../helpers/gltf";
 

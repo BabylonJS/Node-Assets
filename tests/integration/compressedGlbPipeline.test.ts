@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
 
-import { EncodeDracoBlock, EncodeKTX2Block, EncodeMeshoptBlock, GltfInputBlock, GltfOutputBlock, NodeAsset } from "../../src/index";
+import { EncodeDracoBlock, EncodeKTX2Block, EncodeMeshoptBlock, GltfInputBlock, GltfOutputBlock, NodeAsset } from "../../packages/core/src/index";
 import { expectKtx2Image, parseGlbAsync } from "../helpers/glb";
 import { generateTexturedGltfJson } from "../helpers/gltf";
 

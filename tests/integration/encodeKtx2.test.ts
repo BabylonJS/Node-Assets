@@ -2,7 +2,7 @@ import { Document } from "@gltf-transform/core";
 import { EXTTextureWebP } from "@gltf-transform/extensions";
 import { describe, expect, it, vi } from "vitest";
 
-import { EncodeKTX2Block, FbxInputBlock, GltfInputBlock, GltfOutputBlock, NodeAsset, ObjInputBlock } from "../../src/index";
+import { EncodeKTX2Block, FbxInputBlock, GltfInputBlock, GltfOutputBlock, NodeAsset, ObjInputBlock } from "../../packages/core/src/index";
 import { generateTexturedFbxDataWithUvs } from "../helpers/fbx";
 import { expectKtx2Image, getTextureImageIndex, parseGlbAsync } from "../helpers/glb";
 import { generateTexturedGltfJson } from "../helpers/gltf";

@@ -6,5 +6,8 @@
 # a platform binary. pnpm blocks dependency build scripts by default and treats
 # an unapproved script as an install failure. The allowBuilds entry below permits
 # this script.
+packages:
+    - packages/*
+
 allowBuilds:
     esbuild: true

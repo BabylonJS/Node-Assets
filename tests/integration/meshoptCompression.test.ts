@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { EncodeMeshoptBlock, GltfInputBlock, GltfOutputBlock, NodeAsset } from "../../src/index";
+import { EncodeMeshoptBlock, GltfInputBlock, GltfOutputBlock, NodeAsset } from "../../packages/core/src/index";
 import { parseGlbAsync } from "../helpers/glb";
 import { generateGltfJson } from "../helpers/gltf";
 

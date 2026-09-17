@@ -4,13 +4,13 @@ import { pathToFileURL } from "node:url";
 import { build, type Plugin } from "vite";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
-import type * as NodeAssets from "../../src/index";
+import type * as NodeAssets from "../../packages/core/src/index";
 import { parseGlbAsync } from "../helpers/glb";
 import { generateGltfJson } from "../helpers/gltf";
 
 const ConsumerModuleId = "\0node-assets-browser-consumer";
 const PublishedPackageName = "@babylonjs/node-assets";
-const PublishedEntryPath = fileURLToPath(new URL("../../dist/index.js", import.meta.url));
+const PublishedEntryPath = fileURLToPath(new URL("../../packages/core/dist/index.js", import.meta.url));
 
 describe("browser consumer bundle", () => {
     beforeAll(buildLibrary, 120_000);
@@ -66,7 +66,7 @@ describe("browser consumer bundle", () => {
 
 async function buildLibrary(): Promise<void> {
     await build({
-        configFile: fileURLToPath(new URL("../../vite.config.ts", import.meta.url)),
+        configFile: fileURLToPath(new URL("../../packages/core/vite.config.ts", import.meta.url)),
         logLevel: "silent",
     });
 }
