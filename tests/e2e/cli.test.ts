@@ -38,7 +38,7 @@ describe("Node Assets CLI", () => {
         const result = await runNodeAsync([launcher, ...args], directory);
         expect(result.code).toBe(0);
         expect(result.stderr).toBe("");
-        for (const term of ["pipeline", ".gltf", ".glb", "draco", "meshopt", "ktx2", "--stats", "--benchmark"]) {
+        for (const term of ["pipeline", ".gltf", ".glb", "draco", "meshopt", "ktx2", "validate", "--stats", "--benchmark"]) {
             expect(result.stdout).toContain(term);
         }
     });
@@ -237,9 +237,13 @@ describe("Node Assets CLI", () => {
     });
 
     it.each([
+        { blocks: ["validate"], geometry: undefined, ktx2: false },
         { blocks: ["draco"], geometry: "KHR_draco_mesh_compression", ktx2: false },
         { blocks: ["meshopt"], geometry: "EXT_meshopt_compression", ktx2: false },
         { blocks: ["ktx2"], geometry: undefined, ktx2: true },
+        { blocks: ["validate", "draco", "validate"], geometry: "KHR_draco_mesh_compression", ktx2: false },
+        { blocks: ["meshopt", "validate"], geometry: "EXT_meshopt_compression", ktx2: false },
+        { blocks: ["ktx2", "validate"], geometry: undefined, ktx2: true },
         { blocks: ["ktx2", "draco"], geometry: "KHR_draco_mesh_compression", ktx2: true },
         { blocks: ["ktx2", "meshopt"], geometry: "EXT_meshopt_compression", ktx2: true },
     ])(
@@ -264,6 +268,46 @@ describe("Node Assets CLI", () => {
         },
         60_000
     );
+
+    it("prints validation diagnostics and writes output for a valid document", async () => {
+        const source = join(directory, "validate-warnings.gltf");
+        const output = join(directory, "validate-warnings.glb");
+        const io = new NodeIO();
+        const document = await io.read(input);
+        document.createNode();
+        await io.write(source, document);
+
+        const result = await runNodeAsync([launcher, "pipeline", source, "validate", output], directory);
+
+        expect(result.code).toBe(0);
+        expect(result.stdout).toContain(`\u2705 ${source} is valid`);
+        expect(result.stdout).toContain("[Warning]");
+        expect(result.stdout).toContain("at /nodes/1");
+        expect((await readGlbAsync(output)).json.meshes).toHaveLength(1);
+    });
+
+    it("fails validation without creating output or printing success reports", async () => {
+        const source = join(directory, "validate-invalid.gltf");
+        const output = join(directory, "validate-invalid.glb");
+        const io = new NodeIO();
+        const document = await io.read(input);
+        document
+            .getRoot()
+            .listAccessors()[2]!
+            .setArray(new Uint16Array([0, 1, 99]));
+        await io.write(source, document);
+
+        const result = await runNodeAsync([launcher, "pipeline", source, "validate", output, "--stats", "--benchmark"], directory);
+
+        expect(result.code).toBe(1);
+        expect(result.stdout).toContain("[Error]");
+        expect(result.stdout).not.toContain("is valid");
+        expect(result.stdout).not.toContain("Wrote ");
+        expect(result.stdout).not.toContain("Stats:");
+        expect(result.stdout).not.toContain("Benchmark:");
+        expect(result.stderr.trim()).not.toBe("");
+        await expect(readFile(output)).rejects.toThrow();
+    });
 
     it.each([
         { blocks: ["draco", "draco"], first: EncodeDracoBlock, second: EncodeDracoBlock },

@@ -13,6 +13,7 @@ A pipeline is a sequence of operations applied to a 3D asset. The CLI allows you
 ```sh
 node-assets pipeline input.gltf output.glb
 node-assets pipeline input.glb ktx2 draco output.glb
+node-assets pipeline input.glb validate output.glb
 ```
 
 The command syntax is:
@@ -25,9 +26,16 @@ node-assets pipeline <input> [operation...] <output> [--stats] [--benchmark]
 | --------- | -------------------------- |
 | Input     | `.gltf`, `.glb`            |
 | Output    | `.glb`                     |
-| Operation | `draco`, `meshopt`, `ktx2` |
+| Operation | `draco`, `meshopt`, `ktx2`, `validate` |
 
 Without specifying operations, the CLI reads the input and writes it back out as the target output format.
+
+`validate` checks the current document, including buffers and images, with the
+Khronos glTF Validator. It prints grouped diagnostics using the input path as the
+label. Warnings, informational issues, and hints do not fail the run;
+`UNSUPPORTED_EXTENSION` is ignored. Any error stops the pipeline with exit code 1
+before writing output. Place `validate` before or after other operations to check
+the document at that point; it does not validate the original file's packaging.
 
 Run `node-assets --help` for command help or `node-assets --version` for the
 installed version.

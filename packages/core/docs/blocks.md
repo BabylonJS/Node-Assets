@@ -26,6 +26,12 @@
 
 # Transforms
 
+- `ValidateBlock`
+    - Input: `Document`
+    - Output: the same `Document`
+    - Uses: `gltf-validator`; execution-scoped `PlatformIO`
+    - Behavior: Serializes the current document and validates its JSON, buffers, and images. Logs grouped errors, warnings (including informational issues), and hints with their locations. Throws on any errors; otherwise prints a success message. Ignores `UNSUPPORTED_EXTENSION` and does not truncate diagnostics.
+    - Options: `uri` sets the diagnostic label (default: `scene.glb`); it is not loaded.
 - `EncodeKTX2Block`
     - Input: `Document`
     - Output: `Document` (but in future should be type that locks images and/or textures)

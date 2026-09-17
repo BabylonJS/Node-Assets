@@ -48,14 +48,16 @@ describe("browser consumer bundle", () => {
         );
 
         try {
-            const { EncodeDracoBlock, GltfInputBlock, GltfOutputBlock, NodeAsset } = (await import(
+            const { EncodeDracoBlock, GltfInputBlock, GltfOutputBlock, NodeAsset, ValidateBlock } = (await import(
                 `${pathToFileURL(PublishedEntryPath).href}?test=${Date.now()}`
             )) as typeof NodeAssets;
             const source = new GltfInputBlock({ input: url });
             const encoder = new EncodeDracoBlock();
+            const validate = new ValidateBlock();
             const destination = new GltfOutputBlock();
             source.output.connectTo(encoder.input);
-            encoder.output.connectTo(destination.input);
+            encoder.output.connectTo(validate.input);
+            validate.output.connectTo(destination.input);
 
             await parseGlbAsync(await new NodeAsset({ name: "published-node-entry", outputBlock: destination }).executeAsync());
         } finally {

@@ -54,6 +54,7 @@
         "@types/draco3dgltf": "1.4.3",
         "babylonpress-ktx2-encoder": "0.6.0",
         "draco3dgltf": "1.5.7",
+        "gltf-validator": "2.0.0-dev.3.10",
         "meshoptimizer": "1.2.0",
         "sharp": "0.35.4"
     }

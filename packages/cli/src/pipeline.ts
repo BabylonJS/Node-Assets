@@ -18,6 +18,11 @@ export function getPipelineDefinitions() {
         ],
         operations: [
             {
+                name: "validate",
+                description: "Validate the document and fail on errors",
+                create: (library: typeof NodeAssets, path: string) => new library.ValidateBlock({ uri: path }),
+            },
+            {
                 name: "draco",
                 description: "Compress geometry with Draco",
                 create: (library: typeof NodeAssets) => new library.EncodeDracoBlock(),
@@ -66,7 +71,7 @@ export async function createPipelineAsync({ inputPath, outputPath, blockNames }:
     const source = inputDefinition.create(library, inputPath);
     let previous = source.output;
     for (const transform of transforms) {
-        const block = transform.create(library);
+        const block = transform.create(library, inputPath);
         previous.connectTo(block.input);
         previous = block.output;
     }
