@@ -1,3 +1,56 @@
+# Command-line pipelines
+
+The separate `@babylonjs/node-assets-cli` package provides the `node-assets` command:
+
+```sh
+node-assets pipeline input.gltf output.glb
+node-assets pipeline input.glb ktx2 draco output.glb
+```
+
+The syntax is `node-assets pipeline <input file> [...blocks] <output file>`.
+The first path selects the input block, the last selects the output block, and
+the names between them select transform blocks in order.
+
+| Argument | Supported values | Behavior |
+| --- | --- | --- |
+| Input extension | `.gltf`, `.glb` | Read a local glTF or GLB with `GltfInputBlock`. |
+| Output extension | `.glb` | Write GLB with `GltfOutputBlock`. |
+| Transform | `draco` | Apply `EncodeDracoBlock` with library defaults. |
+| Transform | `meshopt` | Apply `EncodeMeshoptBlock` with library defaults. |
+| Transform | `ktx2` | Apply `EncodeKTX2Block` with library defaults. |
+
+Extensions are case-insensitive; block names are case-sensitive. Missing or
+unsupported extensions are errors, including `.gltf` output. With no transforms,
+the input connects directly to the output. This is a library read/write round
+trip, not a byte-for-byte copy or a promise to retain input compression.
+
+Every transform occurrence creates a separate block. Order and repetitions are
+preserved, including pipelines containing both geometry encoders. The CLI does
+not impose combination restrictions; any library failure is reported instead.
+Custom blocks, prefab aliases, and per-block settings are not supported yet.
+
+Paths are local filesystem paths relative to the caller's working directory.
+The input must be a regular file; referenced glTF buffers and images are loaded
+by the library. Quote paths containing spaces and use `--` before positional
+arguments that begin with a hyphen.
+
+The output's parent directory must exist. Existing destinations are never
+overwritten, including when the input and output are the same file. There is no
+`--force` flag. Pipeline failures do not create an output file.
+
+`--help` / `-h` lists syntax, extensions, and blocks. Running without arguments
+also shows help. `--version` / `-v` reports the CLI package version. These commands
+do not run a pipeline. Success exits with status 0; invalid arguments, input,
+pipeline, and output errors are reported to stderr and exit with status 1.
+
+To use the CLI from this repository before installing a published package:
+
+```sh
+pnpm install
+pnpm build
+pnpm cli pipeline input.gltf ktx2 draco output.glb
+```
+
 # Example: Hello, pipeline!
 
 Connect a `GltfInputBlock` to a `GltfOutputBlock`, then execute the resulting `NodeAsset`.

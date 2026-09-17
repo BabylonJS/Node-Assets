@@ -43,12 +43,14 @@
         "access": "public"
     },
     "scripts": {
-        "build": "vite build",
+        "build": "pnpm build:library && pnpm --filter @babylonjs/node-assets-cli build",
+        "build:library": "vite build",
+        "cli": "node packages/cli/bin/node-assets.cjs",
         "typecheck": "tsc -p tsconfig.json --noEmit",
         "lint": "eslint . && pnpm typecheck",
         "lint:fix": "eslint . --fix",
-        "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\" \"*.config.ts\" \"*.config.mjs\"",
-        "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\" \"*.config.ts\" \"*.config.mjs\"",
+        "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\" \"*.config.ts\" \"*.config.mjs\" \"packages/cli/**/*.{ts,cjs}\"",
+        "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\" \"*.config.ts\" \"*.config.mjs\" \"packages/cli/**/*.{ts,cjs}\"",
         "test": "vitest run",
         "test:watch": "vitest",
         "typedocs": "typedoc"

@@ -18,11 +18,14 @@
         "forceConsistentCasingInFileNames": true,
         "resolveJsonModule": true,
         "skipLibCheck": true,
+        "paths": {
+            "@babylonjs/node-assets": ["./src/index.ts"]
+        },
 
         "declaration": true,
         "declarationMap": true,
         "sourceMap": true,
         "noEmit": true
     },
-    "include": ["src", "tests", "*.config.ts", "*.config.mjs", "examples/blockDefinition.ts"]
+    "include": ["src", "tests", "packages/cli/src", "packages/cli/*.config.ts", "*.config.ts", "*.config.mjs", "examples/blockDefinition.ts"]
 }

@@ -1,0 +1,35 @@
+{
+    "name": "@babylonjs/node-assets-cli",
+    "version": "0.1.0",
+    "description": "Build and run Node Assets pipelines from the command line.",
+    "license": "Apache-2.0",
+    "type": "module",
+    "sideEffects": false,
+    "bin": {
+        "node-assets": "./bin/node-assets.cjs"
+    },
+    "files": [
+        "bin",
+        "dist"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/BabylonJS/Node-Assets.git",
+        "directory": "packages/cli"
+    },
+    "bugs": {
+        "url": "https://github.com/BabylonJS/Node-Assets/issues"
+    },
+    "engines": {
+        "node": "^20.19.0 || ^22.13.0 || >=24"
+    },
+    "publishConfig": {
+        "access": "public"
+    },
+    "scripts": {
+        "build": "vite build"
+    },
+    "dependencies": {
+        "@babylonjs/node-assets": "workspace:*"
+    }
+}

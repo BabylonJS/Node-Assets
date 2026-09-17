@@ -82,6 +82,12 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@26.2.0)(vite@6.4.3(@types/node@26.2.0)(yaml@2.9.0))
 
+  packages/cli:
+    dependencies:
+      '@babylonjs/node-assets':
+        specifier: workspace:*
+        version: link:../..
+
 packages:
 
   '@babel/helper-string-parser@7.29.7':
