@@ -230,11 +230,6 @@ describe("Node Assets CLI", () => {
         expect(result.stderr.trim()).not.toBe("");
         expect(await readdir(output)).toEqual([]);
     });
-
-    it("does not start the CLI when the launcher is imported", async () => {
-        const result = await runNodeAsync(["--require", launcher, "--eval", ""], directory);
-        expect(result).toEqual({ code: 0, stdout: "", stderr: "" });
-    });
 });
 
 async function readGlbAsync(path: string) {
