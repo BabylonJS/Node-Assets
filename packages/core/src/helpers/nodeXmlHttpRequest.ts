@@ -4,6 +4,7 @@ import type * as Xhr from "xhr2";
 
 import { isNodeRuntime } from "./isNodeRuntime";
 import { isFileLocation } from "./inputLocation";
+import { withRelativeHttpRedirects } from "./xhr2Workarounds";
 
 export async function initializeNodeXmlHttpRequestAsync(): Promise<void> {
     if (!isNodeRuntime() || typeof globalThis.XMLHttpRequest !== "undefined") {
@@ -18,9 +19,10 @@ export async function initializeNodeXmlHttpRequestAsync(): Promise<void> {
         import(/* @vite-ignore */ fileSystemModuleName) as Promise<typeof FileSystem>,
         import(/* @vite-ignore */ urlModuleName) as Promise<typeof NodeUrl>,
     ]);
+    const RedirectAwareRequest = withRelativeHttpRedirects(HttpRequest);
 
     // xhr2 supplies HTTP(S); this adapter adds asynchronous, read-only filesystem requests.
-    class NodeXmlHttpRequest extends HttpRequest {
+    class NodeXmlHttpRequest extends RedirectAwareRequest {
         #file: URL | undefined;
         #controller: AbortController | undefined;
         #timeout: ReturnType<typeof setTimeout> | undefined;
@@ -62,8 +64,15 @@ export async function initializeNodeXmlHttpRequestAsync(): Promise<void> {
                     }
                     this.status = 200;
                     this.statusText = "OK";
-                    this.responseText = this.responseType === "arraybuffer" ? null : data.toString("utf8");
-                    this.response = this.responseType === "arraybuffer" ? Uint8Array.from(data).buffer : this.responseText;
+                    if (this.responseType === "arraybuffer") {
+                        this.response =
+                            data.byteOffset === 0 && data.byteLength === data.buffer.byteLength
+                                ? data.buffer
+                                : data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+                    } else {
+                        this.responseText = data.toString("utf8");
+                        this.response = this.responseText;
+                    }
                     this.#finish("load");
                 },
                 (error: unknown) => {

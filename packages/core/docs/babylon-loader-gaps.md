@@ -60,6 +60,13 @@ HTTP(S), and the adapter adds asynchronous filesystem reads for models and their
 sidecars. `src/helpers/inputLocation.ts` normalizes paths and file URLs. Neither
 contains format parsing or texture handling.
 
+`src/helpers/xhr2Workarounds.ts` contains a transport dependency workaround, not a
+Babylon patch. xhr2 0.2.1 does not resolve relative redirect locations against the
+current request by default. The adapter updates its base URL after each parsed
+request/redirect through xhr2's `_parseUrl` hook and `nodejsSet` configuration.
+Remove this adapter when xhr2 resolves relative redirect chains itself. Following
+HTTP redirects does not repair Babylon's separate dependency-root issue above.
+
 TGA/BMP/GIF-to-PNG conversion was also removed. That is an image-conversion
 capability requiring a CPU encoding strategy, not something an XHR implementation
 can provide. It is separate from preserving already-supported encoded images.

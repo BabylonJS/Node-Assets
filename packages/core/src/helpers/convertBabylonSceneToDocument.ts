@@ -11,7 +11,8 @@ export async function convertBabylonSceneToDocumentAsync(scene: BabylonScene, io
         if (!(root instanceof Blob)) {
             throw new Error(`The Babylon glTF serializer did not produce "${fileName}".`);
         }
-        return await io.registerExtensions(ALL_EXTENSIONS).readBinary(new Uint8Array(await root.arrayBuffer()));
+        // The GLB bytes no longer depend on the scene; release it before awaiting the document.
+        return io.registerExtensions(ALL_EXTENSIONS).readBinary(new Uint8Array(await root.arrayBuffer()));
     } finally {
         scene.dispose();
     }

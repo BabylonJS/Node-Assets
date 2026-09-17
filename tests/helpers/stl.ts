@@ -10,13 +10,16 @@ endfacet
 endsolid triangle`;
 }
 
-export function generateBinaryStlData(): Uint8Array {
-    const data = new Uint8Array(84 + 50);
+export function generateBinaryStlData(triangleCount = 1): Uint8Array {
+    const data = new Uint8Array(84 + 50 * triangleCount);
     const view = new DataView(data.buffer);
-    view.setUint32(80, 1, true);
+    view.setUint32(80, triangleCount, true);
 
     const values = [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0];
-    values.forEach((value, index) => view.setFloat32(84 + index * 4, value, true));
-    view.setUint16(84 + 48, 0, true);
+    for (let triangle = 0; triangle < triangleCount; triangle++) {
+        const offset = 84 + triangle * 50;
+        values.forEach((value, index) => view.setFloat32(offset + index * 4, value, true));
+        view.setUint16(offset + 48, 0, true);
+    }
     return data;
 }

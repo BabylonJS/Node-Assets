@@ -27,6 +27,8 @@ In Node, the library lazily installs an XMLHttpRequest implementation with
 HTTP(S) and filesystem support, unless the host has already supplied one. A
 host-supplied implementation must support the input locations being loaded.
 Browser loading uses the browser's XMLHttpRequest; filesystem paths are Node-only.
+HTTP redirects are followed, including relative redirect chains. This does not
+change Babylon's dependency-root behavior described below.
 
 OBJ and FBX materials and textures are loaded by Babylon, not rewritten or
 prefetched by the input blocks. Babylon's current limitations therefore apply:

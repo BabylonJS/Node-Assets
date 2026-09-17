@@ -8,12 +8,16 @@ import { withHttpInputsAsync, withInputFilesAsync } from "../helpers/input";
 import { generateBinaryStlData, generateStlData } from "../helpers/stl";
 
 describe("STL input", () => {
-    it("loads a local binary STL file", async () => {
-        await withInputFilesAsync({ "triangle.stl": generateBinaryStlData() }, async (directory) => {
-            const { json } = await parseGlbAsync(await roundTripAsync(new StlInputBlock({ input: join(directory, "triangle.stl") })));
+    it.each([1, 20_000])("loads a local binary STL containing %i triangles", async (triangleCount) => {
+        await withInputFilesAsync({ "triangles.stl": generateBinaryStlData(triangleCount) }, async (directory) => {
+            const document = await new NodeAsset({
+                name: "local-binary-stl",
+                outputBlock: new StlInputBlock({ input: join(directory, "triangles.stl") }),
+            }).executeAsync();
 
-            expect(json.meshes).toHaveLength(1);
-            expect(json.meshes?.[0]?.primitives).toHaveLength(1);
+            const meshes = document.getRoot().listMeshes();
+            expect(meshes).toHaveLength(1);
+            expect(meshes[0]?.listPrimitives()[0]?.getAttribute("POSITION")?.getCount()).toBe(triangleCount * 3);
         });
     });
 

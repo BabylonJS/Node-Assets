@@ -28,6 +28,27 @@ describe("input locations", () => {
         });
     });
 
+    it.each([
+        { Block: GltfInputBlock, data: generateGltfJson(), format: "glTF" },
+        { Block: StlInputBlock, data: generateStlData(), format: "STL" },
+        { Block: ObjInputBlock, data: generateObjData(), format: "OBJ" },
+        { Block: FbxInputBlock, data: generateFbxData(), format: "FBX" },
+    ])("loads $format through relative HTTP redirect chains", async ({ Block, data }) => {
+        await withHttpInputsAsync(
+            {
+                start: { redirect: "/redirects/step" },
+                "redirects/step": { redirect: "next" },
+                "redirects/next": { redirect: "../assets/model" },
+                "assets/model": data,
+            },
+            async (rootUrl) => {
+                const document = await new NodeAsset({ name: "redirected-input", outputBlock: new Block({ input: `${rootUrl}start` }) }).executeAsync();
+
+                expect(document.getRoot().listMeshes()).toHaveLength(1);
+            }
+        );
+    });
+
     it.each([GltfInputBlock, StlInputBlock, ObjInputBlock, FbxInputBlock])("rejects missing local and HTTP inputs with %s", async (Block) => {
         await withInputFilesAsync({}, async (directory) => {
             await expect(new NodeAsset({ name: "missing-file", outputBlock: new Block({ input: join(directory, "missing") }) }).executeAsync()).rejects.toThrow();

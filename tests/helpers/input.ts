@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
 type InputFiles = Readonly<Record<string, string | Uint8Array>>;
+type HttpInputs = Readonly<Record<string, string | Uint8Array | { readonly redirect: string }>>;
 
 export async function withInputFilesAsync<T>(files: InputFiles, run: (directory: string) => Promise<T>): Promise<T> {
     const directory = await mkdtemp(join(tmpdir(), "node-assets-input-"));
@@ -20,9 +21,14 @@ export async function withInputFilesAsync<T>(files: InputFiles, run: (directory:
     }
 }
 
-export async function withHttpInputsAsync<T>(files: InputFiles, run: (rootUrl: string) => Promise<T>): Promise<T> {
+export async function withHttpInputsAsync<T>(files: HttpInputs, run: (rootUrl: string) => Promise<T>): Promise<T> {
     const server = createServer((request, response) => {
         const data = files[(request.url ?? "").slice(1)];
+        if (typeof data === "object" && "redirect" in data) {
+            response.writeHead(302, { location: data.redirect });
+            response.end();
+            return;
+        }
         response.writeHead(data === undefined ? 404 : 200);
         response.end(data);
     });
