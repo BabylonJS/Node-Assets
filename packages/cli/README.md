@@ -1,7 +1,6 @@
 # Node Assets CLI
 
-`@babylonjs/node-assets-cli` builds and runs linear
-[`@babylonjs/node-assets`](https://www.npmjs.com/package/@babylonjs/node-assets)
+`@babylonjs/node-assets-cli` builds and runs linear `@babylonjs/node-assets`
 pipelines. The package installs the `node-assets` command.
 
 ## Usage
