@@ -4,9 +4,8 @@ A graph-based system for preparing 3D assets for the web.
 
 > **⚠️ Notice:** This package is experimental. API is subject to change and not intended for production use.
 
-Use the [library or command-line pipelines](docs/usage.md) to process assets.
-The separate [CLI package](packages/cli/README.md) builds a pipeline from file
-extensions and optional transform names.
+See the [usage guide](docs/usage.md) for the library API or the
+[CLI package](packages/cli/README.md) for terminal usage.
 
 ## Contributing
 

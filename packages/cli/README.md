@@ -1,46 +1,48 @@
 # Node Assets CLI
 
-An experimental command-line interface to `@babylonjs/node-assets`.
-Package name: `@babylonjs/node-assets-cli`. Executable name: `node-assets`.
+`@babylonjs/node-assets-cli` builds and runs linear
+[`@babylonjs/node-assets`](https://www.npmjs.com/package/@babylonjs/node-assets)
+pipelines. The package installs the `node-assets` command.
 
 ## Usage
 
 ```sh
 node-assets pipeline input.gltf output.glb
 node-assets pipeline input.glb ktx2 draco output.glb
-node-assets --help
 ```
 
-The first path selects the input block (`.gltf` or `.glb`); the last selects the
-output block (`.glb`). Extensions are case-insensitive.
+The command syntax is:
 
-Optional `draco`, `meshopt`, and `ktx2` blocks use library defaults and run in the
-given order. Repeated blocks and mixed encoders are passed through to the
-library, including any errors. Without transforms, the CLI performs a library
-read/write round trip, not a byte-for-byte copy.
+```text
+node-assets pipeline <input file> [...blocks] <output file>
+```
 
-Paths are local and relative to your working directory. Quote paths with spaces;
-use `--` before positionals that start with a hyphen. The input must be a regular
-file, the destination's parent must exist, and existing files are never
-overwritten. There is no `--force`.
+The input extension selects the input block. The output extension selects the
+output block.
 
-`--help` / `-h` and no arguments show help. `--version` / `-v` prints the CLI
-version. Success exits with status 0; errors go to stderr with status 1.
+| Kind | Supported values |
+| --- | --- |
+| Input | `.gltf`, `.glb` |
+| Output | `.glb` |
+| Block | `draco`, `meshopt`, `ktx2` |
 
-## Working in this repository
+The CLI creates each named block and connects the pipeline from left to right.
+It preserves repeated blocks and mixed encoders. Without a block name, the CLI
+reads the input and writes it as GLB.
 
-Run these commands from the repository root:
+Paths are relative to the current working directory. The input must be a file,
+and the output directory must exist. The CLI refuses to overwrite an existing
+file.
+
+Run `node-assets --help` for command help or `node-assets --version` for the
+installed version.
+
+## Develop locally
+
+From the repository root:
 
 ```sh
 pnpm install
 pnpm build
 pnpm cli pipeline input.gltf ktx2 draco output.glb
 ```
-
-This workflow does not require a published CLI release. See the
-[usage guide](https://github.com/BabylonJS/Node-Assets/blob/main/docs/usage.md)
-for the complete contract.
-
-## License
-
-[Apache-2.0](LICENSE)
