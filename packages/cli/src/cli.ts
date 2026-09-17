@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 
 import { version } from "../package.json";
+import { startBenchmark } from "./benchmark";
+import { createByteFormatter } from "./format";
 import { createPipelineAsync, getPipelineDefinitions } from "./pipeline";
 
 export async function runCliAsync(args: string[]): Promise<void> {
@@ -13,6 +15,8 @@ export async function runCliAsync(args: string[]): Promise<void> {
         options: {
             help: { type: "boolean", short: "h" },
             version: { type: "boolean", short: "v" },
+            stats: { type: "boolean" },
+            benchmark: { type: "boolean" },
         },
     });
 
@@ -36,17 +40,30 @@ export async function runCliAsync(args: string[]): Promise<void> {
 
     const inputPath = resolve(input);
     const outputPath = resolve(output);
-    if (!(await stat(inputPath)).isFile()) {
+    const inputFile = await stat(inputPath);
+    if (!inputFile.isFile()) {
         throw new Error(`Input is not a regular file: ${inputPath}`);
     }
 
+    const finishBenchmark = values.benchmark ? startBenchmark() : undefined;
     const asset = await createPipelineAsync({ inputPath, outputPath, blockNames: remaining });
+    let outputSize: number;
     try {
         const file = await asset.executeAsync();
         await writeFile(outputPath, new Uint8Array(await file.arrayBuffer()), { flag: "wx" });
-        console.log(`Wrote ${outputPath}`);
+        outputSize = file.size;
     } finally {
         asset.dispose();
+    }
+    const benchmarkReport = finishBenchmark?.();
+
+    console.log(`Wrote ${outputPath}`);
+    if (values.stats) {
+        const formatSize = createByteFormatter(inputFile.size);
+        console.log(`Stats:\n  Total size before: ${formatSize(inputFile.size)}\n  Total size after: ${formatSize(outputSize)}`);
+    }
+    if (benchmarkReport !== undefined) {
+        console.log(benchmarkReport);
     }
 }
 
@@ -54,7 +71,7 @@ function printHelp(): void {
     const { inputs, outputs, operations } = getPipelineDefinitions();
     console.log(
         [
-            "Usage: node-assets pipeline <input> [operations...] <output>",
+            "Usage: node-assets pipeline <input> [operations...] <output> [--stats] [--benchmark]",
             "",
             `Supported file types:`,
             `Input: ${inputs.flatMap(({ extensions }) => extensions).join(", ")}`,
@@ -67,6 +84,8 @@ function printHelp(): void {
             "Options:",
             "  -h, --help     Show this help",
             "  -v, --version  Show the CLI version",
+            "  --stats       Show named input/output file sizes in readable units",
+            "  --benchmark   Show completion time, CPU time, RSS, and heap usage",
             "  --            End options before hyphen-prefixed paths",
             "",
             "Example: node-assets pipeline input.gltf ktx2 draco output.glb",

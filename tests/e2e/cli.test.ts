@@ -1,6 +1,6 @@
-import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { join, relative } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { NodeIO } from "@gltf-transform/core";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -38,7 +38,7 @@ describe("Node Assets CLI", () => {
         const result = await runNodeAsync([launcher, ...args], directory);
         expect(result.code).toBe(0);
         expect(result.stderr).toBe("");
-        for (const term of ["pipeline", ".gltf", ".glb", "draco", "meshopt", "ktx2"]) {
+        for (const term of ["pipeline", ".gltf", ".glb", "draco", "meshopt", "ktx2", "--stats", "--benchmark"]) {
             expect(result.stdout).toContain(term);
         }
     });
@@ -80,11 +80,130 @@ describe("Node Assets CLI", () => {
         const output = join(directory, `roundtrip-${extension}.glb`);
         const result = await runNodeAsync([launcher, "pipeline", `input.${extension}`, output], directory);
         expect(result.code).toBe(0);
+        expect(result.stdout).not.toContain("Stats:");
+        expect(result.stdout).not.toContain("Benchmark:");
         const document = await new NodeIO().read(output);
         expect(document.getRoot().listMeshes()[0]?.listPrimitives()[0]?.getAttribute("POSITION")?.getArray()).toEqual(new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]));
         const parsed = await readGlbAsync(output);
         expect(parsed.json.extensionsUsed ?? []).not.toContain("KHR_draco_mesh_compression");
         expect(parsed.json.extensionsUsed ?? []).not.toContain("EXT_meshopt_compression");
+    });
+
+    it.each([
+        { extension: "gltf", flags: ["--stats"] },
+        { extension: "glb", flags: ["--stats"] },
+        { extension: "glb", flags: ["--benchmark"] },
+        { extension: "glb", flags: ["--stats", "--benchmark"] },
+    ])("reports requested metrics for $extension with $flags", async ({ extension, flags }) => {
+        const source = join(directory, `input.${extension}`);
+        const output = join(directory, `report-${extension}-${flags.join("-")}.glb`);
+        const result = await runNodeAsync([launcher, "pipeline", source, "draco", output, ...flags], directory);
+        expect(result.code).toBe(0);
+        expect(result.stderr).toBe("");
+        expect((await readGlbAsync(output)).json.extensionsUsed).toContain("KHR_draco_mesh_compression");
+        expect(result.stdout).toContain(`Wrote ${output}`);
+
+        if (flags.includes("--stats")) {
+            expect(result.stdout).toContain(`Stats:\n  Total size before: ${(await stat(source)).size} B\n  Total size after: ${(await stat(output)).size} B`);
+        } else {
+            expect(result.stdout).not.toContain("Stats:");
+        }
+
+        if (flags.includes("--benchmark")) {
+            expect(result.stdout).toContain("Benchmark:");
+            for (const label of ["Completion time", "CPU time (user)", "CPU time (system)"]) {
+                const line = result.stdout.split("\n").find((line) => line.startsWith(`  ${label}: `));
+                expect(line).toMatch(/: \d+\.\d{2} (?:ms|s|min|h)$/u);
+                const value = Number(line?.split(": ")[1]?.split(" ")[0]);
+                expect(value).toBeGreaterThanOrEqual(0);
+                if (label === "Completion time") {
+                    expect(value).toBeGreaterThan(0);
+                }
+            }
+            for (const label of ["RSS", "Peak RSS (process lifetime)", "Heap used"]) {
+                const line = result.stdout.split("\n").find((line) => line.startsWith(`  ${label}: `));
+                expect(line).toMatch(/: (?:\d+ B|\d+\.\d{2} (?:KiB|MiB|GiB|TiB|PiB))$/u);
+                expect(Number(line?.split(": ")[1]?.split(" ")[0])).toBeGreaterThan(0);
+                expect(Number(line?.split(": ")[1]?.split(" ")[0])).toBeLessThan(1_024);
+            }
+        } else {
+            expect(result.stdout).not.toContain("Benchmark:");
+        }
+    });
+
+    it.each([
+        { bytes: 1_023, expected: "1023 B", divisor: 1 },
+        { bytes: 1_024, expected: "1.00 KiB", divisor: 1_024 },
+        { bytes: 1_536, expected: "1.50 KiB", divisor: 1_024 },
+        { bytes: 1_048_575, expected: "1.00 MiB", divisor: 1_048_576 },
+        { bytes: 1_048_576, expected: "1.00 MiB", divisor: 1_048_576 },
+        { bytes: 1_310_720, expected: "1.25 MiB", divisor: 1_048_576 },
+    ])("formats input sizes of $bytes bytes as $expected and keeps the unit for output", async ({ bytes, expected, divisor }) => {
+        const source = join(directory, `size-${bytes}.gltf`);
+        const output = join(directory, `size-${bytes}.glb`);
+        await writeFile(source, generateGltfJson().padEnd(bytes, " "));
+
+        const result = await runNodeAsync([launcher, "pipeline", source, output, "--stats"], directory);
+        expect(result.code).toBe(0);
+        expect(result.stdout).toContain(`Total size before: ${expected}`);
+        const outputBytes = (await stat(output)).size;
+        expect(result.stdout).toContain(`Total size after: ${divisor === 1 ? outputBytes : (outputBytes / divisor).toFixed(2)} ${expected.split(" ")[1]}`);
+    });
+
+    it.each([
+        { padding: 960, unit: "B" },
+        { padding: 2_048, unit: "KiB" },
+    ])("formats output sizes using the input's $unit unit even when output grows", async ({ padding, unit }) => {
+        const source = join(directory, `large-output-${unit}.gltf`);
+        const output = join(directory, `large-output-${unit}.glb`);
+        await writeFile(source, JSON.stringify({ asset: { version: "2.0" }, extras: { label: "x".repeat(padding) } }));
+
+        const result = await runNodeAsync([launcher, "pipeline", source, output, "--stats"], directory);
+        expect(result.code).toBe(0);
+        const outputBytes = (await stat(output)).size;
+        expect(outputBytes).toBeGreaterThan(1_024);
+        expect(outputBytes).toBeLessThan(1_048_576);
+        expect(result.stdout).toContain(`Total size after: ${unit === "B" ? outputBytes : (outputBytes / 1_024).toFixed(2)} ${unit}`);
+    });
+
+    it.each([
+        { milliseconds: 0, completion: "0.00 ms", user: "0.00 ms", system: "0.00 ms" },
+        { milliseconds: 12.34, completion: "12.34 ms", user: "24.68 ms", system: "6.17 ms" },
+        { milliseconds: 999.994, completion: "999.99 ms", user: "1999.99 ms", system: "500.00 ms" },
+        { milliseconds: 999.999, completion: "1.00 s", user: "2.00 s", system: "0.50 s" },
+        { milliseconds: 1_000, completion: "1.00 s", user: "2.00 s", system: "0.50 s" },
+        { milliseconds: 2_538.93, completion: "2.54 s", user: "5.08 s", system: "1.27 s" },
+        { milliseconds: 59_999, completion: "1.00 min", user: "2.00 min", system: "0.50 min" },
+        { milliseconds: 60_000, completion: "1.00 min", user: "2.00 min", system: "0.50 min" },
+        { milliseconds: 72_471.94, completion: "1.21 min", user: "2.42 min", system: "0.60 min" },
+        { milliseconds: 3_599_990, completion: "1.00 h", user: "2.00 h", system: "0.50 h" },
+        { milliseconds: 3_600_000, completion: "1.00 h", user: "2.00 h", system: "0.50 h" },
+        { milliseconds: 5_400_000, completion: "1.50 h", user: "3.00 h", system: "0.75 h" },
+    ])("formats $milliseconds ms using the completion-time unit for every timing row", async ({ milliseconds, completion, user, system }) => {
+        const output = join(directory, `timing-${milliseconds}.glb`);
+        // Keep the real pipeline, but control clocks in a child process to cover long runs without waiting.
+        const script = `
+            const { runCliAsync } = await import(${JSON.stringify(new URL("../dist/cli.js", pathToFileURL(launcher)).href)});
+            let started = false;
+            process.hrtime.bigint = () => {
+                if (!started) {
+                    started = true;
+                    return 0n;
+                }
+                return ${BigInt(Math.round(milliseconds * 1_000_000))}n;
+            };
+            process.cpuUsage = (previous) => previous === undefined
+                ? { user: 0, system: 0 }
+                : ${JSON.stringify({ user: Math.round(milliseconds * 2_000), system: Math.round(milliseconds * 500) })};
+            await runCliAsync(${JSON.stringify(["pipeline", input, output, "--benchmark"])});
+        `;
+        const result = await runNodeAsync(["--input-type=module", "--eval", script], directory);
+        expect(result.code).toBe(0);
+        expect(result.stderr).toBe("");
+        expect(result.stdout).toContain(`Completion time: ${completion}`);
+        expect(result.stdout).toContain(`CPU time (user): ${user}`);
+        expect(result.stdout).toContain(`CPU time (system): ${system}`);
+        expect((await readGlbAsync(output)).json.meshes).toHaveLength(1);
     });
 
     it("resolves sibling glTF resources from the input path", async () => {
@@ -182,13 +301,16 @@ describe("Node Assets CLI", () => {
         60_000
     );
 
-    it("does not overwrite an existing destination", async () => {
-        const output = join(directory, "existing.glb");
+    it.each([[], ["--stats", "--benchmark"]].map((flags) => ({ flags })))("does not overwrite an existing destination with $flags", async ({ flags }) => {
+        const output = join(directory, `existing-${flags.join("-")}.glb`);
         const original = Buffer.from("keep this file");
         await writeFile(output, original);
-        const result = await runNodeAsync([launcher, "pipeline", input, output], directory);
+        const result = await runNodeAsync([launcher, ...flags, "pipeline", input, output], directory);
         expect(result.code).toBe(1);
         expect(result.stderr.trim()).not.toBe("");
+        expect(result.stdout).not.toContain("Wrote ");
+        expect(result.stdout).not.toContain("Stats:");
+        expect(result.stdout).not.toContain("Benchmark:");
         expect(await readFile(output)).toEqual(original);
     });
 
