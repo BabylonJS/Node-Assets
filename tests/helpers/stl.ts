@@ -1,7 +1,3 @@
-export function generateStlDataUri(): string {
-    return `data:application/octet-stream;base64,${btoa(generateStlData())}`;
-}
-
 export function generateStlData(): string {
     return `solid triangle
 facet normal 0 0 1

@@ -13,10 +13,6 @@ usemtl None
 f 1/1/1 2/2/1 3/3/1`;
 }
 
-export function generateObjDataUri(): string {
-    return createTextDataUri(generateObjData());
-}
-
 export function generateTexturedObjData(mtlPath = "materials/model.mtl", materialName = "Textured"): string {
     return `mtllib ${mtlPath}
 o Triangle
@@ -40,20 +36,4 @@ map_bump -bm 0.5 ${texturePath}`;
 
 export function generateTextureData(): Uint8Array {
     return Uint8Array.from(atob(PNG_DATA), (character) => character.charCodeAt(0));
-}
-
-export function generateTextureDataUri(): string {
-    return `data:image/png;base64,${PNG_DATA}`;
-}
-
-function createTextDataUri(text: string): string {
-    return `data:text/plain;base64,${toBase64(new TextEncoder().encode(text))}`;
-}
-
-function toBase64(data: Uint8Array): string {
-    let binary = "";
-    for (const byte of data) {
-        binary += String.fromCharCode(byte);
-    }
-    return btoa(binary);
 }

@@ -9,7 +9,7 @@ import cliPackage from "../../packages/cli/package.json";
 import { EncodeDracoBlock, EncodeKTX2Block, EncodeMeshoptBlock, GltfInputBlock, GltfOutputBlock, NodeAsset } from "../../packages/core/src/index";
 import { buildCliFixtureAsync, runNodeAsync } from "../helpers/cli";
 import { expectKtx2Image, parseGlbAsync } from "../helpers/glb";
-import { generateGlbDataUri, generateGltfJson, generateTexturedGltfJson } from "../helpers/gltf";
+import { generateGlbData, generateGltfJson, generateTexturedGltfJson } from "../helpers/gltf";
 
 describe("Node Assets CLI", () => {
     let directory: string;
@@ -24,8 +24,7 @@ describe("Node Assets CLI", () => {
         texturedInput = join(directory, "textured.gltf");
         await writeFile(input, generateGltfJson());
         await writeFile(texturedInput, generateTexturedGltfJson());
-        const glbDataUri = generateGlbDataUri();
-        await writeFile(join(directory, "input.glb"), Buffer.from(glbDataUri.slice(glbDataUri.indexOf(",") + 1), "base64"));
+        await writeFile(join(directory, "input.glb"), generateGlbData());
     }, 120_000);
 
     afterAll(async () => {

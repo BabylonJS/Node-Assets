@@ -1,7 +1,3 @@
-export function generateFbxDataUri(): string {
-    return `data:application/octet-stream;base64,${btoa(generateFbxData())}`;
-}
-
 export function generateFbxData(): string {
     return generateAsciiFbxData();
 }
