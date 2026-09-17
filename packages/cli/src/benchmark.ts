@@ -1,3 +1,5 @@
+import { formatBytes } from "./formatBytes";
+
 export function startBenchmark(): () => string {
     const startedAt = process.hrtime.bigint();
     const initialCpuUsage = process.cpuUsage();
@@ -19,4 +21,3 @@ export function startBenchmark(): () => string {
         ].join("\n");
     };
 }
-import { formatBytes } from "./formatBytes";
