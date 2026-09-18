@@ -20,7 +20,12 @@ export default defineConfig({
         },
         rollupOptions: {
             external: (id) =>
-                /^@babylonjs\//.test(id) || /^@gltf-transform\//.test(id) || /^babylonpress-ktx2-encoder(?:\/|$)/.test(id) || /^meshoptimizer$/.test(id) || /^sharp$/.test(id),
+                /^@babylonjs\//.test(id) ||
+                /^@gltf-transform\//.test(id) ||
+                /^babylonpress-ktx2-encoder(?:\/|$)/.test(id) ||
+                /^gltf-validator$/.test(id) ||
+                /^meshoptimizer$/.test(id) ||
+                /^sharp$/.test(id),
         },
     },
     plugins: [

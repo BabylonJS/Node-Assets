@@ -25,7 +25,7 @@ node-assets pipeline <input> [operation...] <output> [--stats] [--benchmark]
 | --------- | -------------------------- |
 | Input     | `.gltf`, `.glb`            |
 | Output    | `.glb`                     |
-| Operation | `draco`, `meshopt`, `ktx2` |
+| Operation | `draco`, `meshopt`, `ktx2`, `validate` |
 
 Without specifying operations, the CLI reads the input and writes it back out as the target output format.
 

@@ -26,6 +26,11 @@
 
 # Transforms
 
+- `ValidateBlock`
+    - Input: `Document`
+    - Output: the same `Document`
+    - Uses: `gltf-validator`; execution-scoped `PlatformIO`
+    - Behavior: Validates the document, throwing on errors and logging other issues. Ignores `UNSUPPORTED_EXTENSION`.
 - `EncodeKTX2Block`
     - Input: `Document`
     - Output: `Document` (but in future should be type that locks images and/or textures)
