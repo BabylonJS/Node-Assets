@@ -16,46 +16,6 @@ const asset = new NodeAsset({
 const result = await asset.executeAsync();
 ```
 
-# Example: Validating a document
-
-Insert a `ValidateBlock` wherever the current document should be checked by the
-Khronos glTF Validator, or use it as the output block to return the validated
-`Document`.
-
-```ts
-const source = new GltfInputBlock({ input: "box%20(1).glb" });
-const validate = new ValidateBlock({ uri: "box%20(1).glb" });
-const destination = new GltfOutputBlock();
-
-source.output.connectTo(validate.input);
-validate.output.connectTo(destination.input);
-
-const asset = new NodeAsset({ name: "validated-gltf", outputBlock: destination });
-const result = await asset.executeAsync();
-```
-
-Validation checks a serialized copy of the current document, including its
-buffers and images, rather than the original source file. It returns the same
-`Document` reference on success. The optional `uri` is a display label, not a file
-to load; it defaults to `scene.glb` because documents do not retain source paths.
-
-If there are no errors, the block prints a check mark followed by `<uri> is valid`
-using `console.log`. Diagnostics are grouped by severity, code, and message, with
-each location on an indented `at` line. Errors are labeled `[Error]`, warnings and
-informational issues are labeled `[Warning]`, and hints are labeled `[Hint]`.
-Errors come first, then warnings, informational issues, and hints. All reported
-diagnostics are logged, even when validation fails. Any validation error rejects
-the execution, preventing downstream blocks from running.
-
-`UNSUPPORTED_EXTENSION` issues are ignored. Other diagnostics are not truncated,
-so earlier warnings cannot hide a later error.
-
-The CLI supports the same block:
-
-```sh
-node-assets pipeline input.glb validate output.glb
-```
-
 # Example: CLI run reports
 
 ```sh
