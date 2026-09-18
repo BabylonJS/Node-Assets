@@ -26,7 +26,7 @@
 
 # Transforms
 
-- `DeleteMaterialsBlock`
+- `StripMaterialsBlock`
     - Input: `Document`
     - Output: `Document`
     - Uses: glTF Transform document graph

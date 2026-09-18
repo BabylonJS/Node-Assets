@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { DeleteMaterialsBlock, GltfInputBlock, GltfOutputBlock, NodeAsset } from "../../src/index";
+import { GltfInputBlock, GltfOutputBlock, NodeAsset, StripMaterialsBlock } from "../../src/index";
 import { parseGlbAsync } from "../helpers/glb";
 import { generateGltfJson, generateTexturedGltfJson } from "../helpers/gltf";
 
-describe("material deletion", () => {
+describe("material stripping", () => {
     it("removes materials, assignments, and newly unused texture data from connected glTF output", async () => {
         const url = "https://example.com/model.gltf";
         vi.stubGlobal(
@@ -14,10 +14,10 @@ describe("material deletion", () => {
 
         try {
             const source = new GltfInputBlock({ input: url });
-            const deleteMaterials = new DeleteMaterialsBlock();
+            const stripMaterials = new StripMaterialsBlock();
             const destination = new GltfOutputBlock();
-            source.output.connectTo(deleteMaterials.input);
-            deleteMaterials.output.connectTo(destination.input);
+            source.output.connectTo(stripMaterials.input);
+            stripMaterials.output.connectTo(destination.input);
 
             const parsed = await parseGlbAsync(await new NodeAsset({ name: "material-free-glb", outputBlock: destination }).executeAsync());
             const primitive = parsed.json.meshes?.[0]?.primitives[0];
@@ -46,10 +46,10 @@ describe("material deletion", () => {
 
         try {
             const source = new GltfInputBlock({ input: url });
-            const deleteMaterials = new DeleteMaterialsBlock();
+            const stripMaterials = new StripMaterialsBlock();
             const destination = new GltfOutputBlock();
-            source.output.connectTo(deleteMaterials.input);
-            deleteMaterials.output.connectTo(destination.input);
+            source.output.connectTo(stripMaterials.input);
+            stripMaterials.output.connectTo(destination.input);
 
             const parsed = await parseGlbAsync(await new NodeAsset({ name: "already-material-free-glb", outputBlock: destination }).executeAsync());
 

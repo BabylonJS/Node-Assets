@@ -4,24 +4,24 @@ import { GltfDocumentType } from "../connectionPoints/gltfDocument";
 import { Block, type BlockOptions } from "./block";
 import { defineBlock } from "./blockDefinition";
 
-const DeleteMaterialsBlockDefinition = /* @__PURE__ */ defineBlock({
-    type: "transform.delete-materials",
+const StripMaterialsBlockDefinition = /* @__PURE__ */ defineBlock({
+    type: "transform.strip-materials",
     input: GltfDocumentType,
     output: GltfDocumentType,
-    run: deleteMaterials,
+    run: stripMaterials,
 });
 
 /** Options for naming the block or supplying its initial input. */
-export type DeleteMaterialsBlockOptions = BlockOptions<typeof DeleteMaterialsBlockDefinition>;
+export type StripMaterialsBlockOptions = BlockOptions<typeof StripMaterialsBlockDefinition>;
 
-/** Removes every material, material assignment, and texture made unused by their removal. */
-export class DeleteMaterialsBlock extends Block<typeof DeleteMaterialsBlockDefinition> {
-    public constructor(options?: DeleteMaterialsBlockOptions) {
-        super(DeleteMaterialsBlockDefinition, options);
+/** Strips every authored material, material assignment, and texture made unused by their removal. */
+export class StripMaterialsBlock extends Block<typeof StripMaterialsBlockDefinition> {
+    public constructor(options?: StripMaterialsBlockOptions) {
+        super(StripMaterialsBlockDefinition, options);
     }
 }
 
-function deleteMaterials(document: Document): Document {
+function stripMaterials(document: Document): Document {
     const root = document.getRoot();
     const graph = document.getGraph();
     const materials = root.listMaterials();

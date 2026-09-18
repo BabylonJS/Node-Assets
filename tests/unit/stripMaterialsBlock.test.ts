@@ -2,9 +2,9 @@ import { Document } from "@gltf-transform/core";
 import { EXTMeshFeatures, KHRMaterialsClearcoat, KHRMaterialsVariants, KHRTextureBasisu, KHRTextureTransform, KHRXMP } from "@gltf-transform/extensions";
 import { describe, expect, it } from "vitest";
 
-import { DeleteMaterialsBlock, NodeAsset } from "../../src/index";
+import { NodeAsset, StripMaterialsBlock } from "../../src/index";
 
-describe("DeleteMaterialsBlock", () => {
+describe("StripMaterialsBlock", () => {
     it("removes every material and only textures made unused by their deletion", async () => {
         const { document, primitive } = createDocument();
         const removedTexture = document.createTexture("removed");
@@ -17,9 +17,9 @@ describe("DeleteMaterialsBlock", () => {
         const texCoord = primitive.getAttribute("TEXCOORD_0");
         const color = primitive.getAttribute("COLOR_0");
         const indices = primitive.getIndices();
-        const block = new DeleteMaterialsBlock({ input: document });
+        const block = new StripMaterialsBlock({ input: document });
 
-        const result = await new NodeAsset({ name: "delete-materials", outputBlock: block }).executeAsync();
+        const result = await new NodeAsset({ name: "strip-materials", outputBlock: block }).executeAsync();
 
         expect(result).toBe(document);
         expect(document.getRoot().listMaterials()).toEqual([]);
@@ -66,8 +66,8 @@ describe("DeleteMaterialsBlock", () => {
         node.setExtension(KHRXMP.EXTENSION_NAME, packet);
         extensionTexture.setExtension(KHRXMP.EXTENSION_NAME, texturePacket);
 
-        const block = new DeleteMaterialsBlock({ input: document });
-        await new NodeAsset({ name: "delete-material-extensions", outputBlock: block }).executeAsync();
+        const block = new StripMaterialsBlock({ input: document });
+        await new NodeAsset({ name: "strip-material-extensions", outputBlock: block }).executeAsync();
 
         expect(document.getRoot().listTextures()).toEqual([sharedTexture]);
         expect(extensionTexture.getImage()).toBeNull();
@@ -83,8 +83,8 @@ describe("DeleteMaterialsBlock", () => {
         const document = new Document();
         const preexistingUnusedTexture = document.createTexture("preexisting-unused").setMimeType("image/ktx2");
         const textureExtension = document.createExtension(KHRTextureBasisu).setRequired(true);
-        const block = new DeleteMaterialsBlock({ input: document });
-        const asset = new NodeAsset({ name: "delete-no-materials", outputBlock: block });
+        const block = new StripMaterialsBlock({ input: document });
+        const asset = new NodeAsset({ name: "strip-no-materials", outputBlock: block });
 
         await expect(asset.executeAsync()).resolves.toBe(document);
         await expect(asset.executeAsync()).resolves.toBe(document);
