@@ -8,6 +8,12 @@ importers:
 
   .:
     devDependencies:
+      '@babylonjs/core':
+        specifier: 9.21.2
+        version: 9.21.2
+      '@babylonjs/ktx2decoder':
+        specifier: 9.21.2
+        version: 9.21.2(@babylonjs/core@9.21.2)
       '@babylonjs/node-assets':
         specifier: workspace:*
         version: link:packages/core
@@ -23,6 +29,9 @@ importers:
       '@types/node':
         specifier: ^26.1.1
         version: 26.2.0
+      babylonpress-ktx2-encoder:
+        specifier: 0.6.0
+        version: 0.6.0
       eslint:
         specifier: ^10.7.0
         version: 10.8.1
@@ -38,6 +47,9 @@ importers:
       prettier:
         specifier: ^3.9.6
         version: 3.9.6
+      sharp:
+        specifier: 0.35.4
+        version: 0.35.4(@types/node@26.2.0)
       typedoc:
         specifier: ^0.28.20
         version: 0.28.20(typescript@6.0.3)
@@ -68,6 +80,9 @@ importers:
       '@babylonjs/core':
         specifier: ^9.21.2
         version: 9.21.2
+      '@babylonjs/ktx2decoder':
+        specifier: 9.21.2
+        version: 9.21.2(@babylonjs/core@9.21.2)
       '@babylonjs/loaders':
         specifier: ^9.21.2
         version: 9.21.2(@babylonjs/core@9.21.2)(babylonjs-gltf2interface@9.21.2)
@@ -123,6 +138,11 @@ packages:
 
   '@babylonjs/core@9.21.2':
     resolution: {integrity: sha512-y4brONcZ4X5rfoiLqTdd9jSZzyIeJ+zHhvN6qgDCpgVIyM2sJlCouLBSvNn+Kl7jIxmzJhIvbBvUIS/sx8jFUw==}
+
+  '@babylonjs/ktx2decoder@9.21.2':
+    resolution: {integrity: sha512-G5DAxbkIVHQKAvDXvnDvH/PFWdi1PkjsTrDVNQux1+S6IG+EYrkyqt3EqFBLeprzyYoiV20r1g2wrOFCVslshA==}
+    peerDependencies:
+      '@babylonjs/core': ^9.0.0
 
   '@babylonjs/loaders@9.21.2':
     resolution: {integrity: sha512-ZPfVpNBbxZhL3Xns355gyIFBfEgq4qGAbW/Rf5rwvkivTbQcKQRTmp+GTieTdPtEcPGBTSBVFnr/LioKEmJlvQ==}
@@ -1689,6 +1709,10 @@ snapshots:
       '@babel/helper-validator-identifier': 7.29.7
 
   '@babylonjs/core@9.21.2': {}
+
+  '@babylonjs/ktx2decoder@9.21.2(@babylonjs/core@9.21.2)':
+    dependencies:
+      '@babylonjs/core': 9.21.2
 
   '@babylonjs/loaders@9.21.2(@babylonjs/core@9.21.2)(babylonjs-gltf2interface@9.21.2)':
     dependencies:
