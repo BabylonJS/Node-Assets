@@ -13,7 +13,6 @@ A pipeline is a sequence of operations applied to a 3D asset. The CLI allows you
 ```sh
 node-assets pipeline input.gltf output.glb
 node-assets pipeline input.glb ktx2 draco output.glb
-node-assets pipeline input.glb validate output.glb
 ```
 
 The command syntax is:

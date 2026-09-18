@@ -19,7 +19,7 @@ export function getPipelineDefinitions() {
         operations: [
             {
                 name: "validate",
-                description: "Validate the document and fail on errors",
+                description: "Validate the file and fail on errors",
                 create: (library: typeof NodeAssets, path: string) => new library.ValidateBlock({ uri: path }),
             },
             {
