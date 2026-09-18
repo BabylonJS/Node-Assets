@@ -20,7 +20,7 @@ export function getPipelineDefinitions() {
             {
                 name: "validate",
                 description: "Validate the file and fail on errors",
-                create: (library: typeof NodeAssets, path: string) => new library.ValidateBlock({ uri: path }),
+                create: (library: typeof NodeAssets) => new library.ValidateBlock(),
             },
             {
                 name: "draco",
@@ -71,7 +71,7 @@ export async function createPipelineAsync({ inputPath, outputPath, blockNames }:
     const source = inputDefinition.create(library, inputPath);
     let previous = source.output;
     for (const transform of transforms) {
-        const block = transform.create(library, inputPath);
+        const block = transform.create(library);
         previous.connectTo(block.input);
         previous = block.output;
     }

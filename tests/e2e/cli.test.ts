@@ -280,7 +280,7 @@ describe("Node Assets CLI", () => {
         const result = await runNodeAsync([launcher, "pipeline", source, "validate", output], directory);
 
         expect(result.code).toBe(0);
-        expect(result.stdout).toContain(`\u2705 ${source} is valid`);
+        expect(result.stdout).toContain("\u2705 glTF is valid");
         expect(result.stdout).toContain("[Warning]");
         expect(result.stdout).toContain("at /nodes/1");
         expect((await readGlbAsync(output)).json.meshes).toHaveLength(1);

@@ -31,7 +31,6 @@
     - Output: the same `Document`
     - Uses: `gltf-validator`; execution-scoped `PlatformIO`
     - Behavior: Validates the document, throwing on errors and logging other issues. Ignores `UNSUPPORTED_EXTENSION`.
-    - Options: `uri` sets the diagnostic label (default: `scene.glb`); it is not loaded.
 - `EncodeKTX2Block`
     - Input: `Document`
     - Output: `Document` (but in future should be type that locks images and/or textures)

@@ -8,7 +8,6 @@ declare module "gltf-validator" {
     }
 
     export interface ValidationReport {
-        readonly uri?: string;
         readonly issues: {
             readonly numErrors: number;
             readonly numWarnings: number;
@@ -20,7 +19,6 @@ declare module "gltf-validator" {
     }
 
     export interface ValidationOptions {
-        readonly uri?: string;
         readonly maxIssues?: number;
         readonly ignoredIssues?: readonly string[];
         readonly externalResourceFunction?: (uri: string) => Promise<Uint8Array>;

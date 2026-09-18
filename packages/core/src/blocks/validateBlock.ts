@@ -2,26 +2,21 @@ import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
 import type { ValidationIssue } from "gltf-validator";
 
 import { GltfDocumentType } from "../connectionPoints/gltfDocument";
-import { UrlType } from "../connectionPoints/url";
 import { PlatformIOResource } from "../resources/platformIOResource";
 import { Block, type BlockOptions } from "./block";
-import { defineBlock, value } from "./blockDefinition";
+import { defineBlock } from "./blockDefinition";
 
 const ValidateBlockDefinition = /* @__PURE__ */ defineBlock({
     type: "transform.validate",
     input: GltfDocumentType,
     output: GltfDocumentType,
-    config: {
-        uri: /* @__PURE__ */ value(UrlType, "scene.glb"),
-    },
     resources: {
         io: PlatformIOResource,
     },
-    runAsync: async (document, { uri }, { io }) => {
+    runAsync: async (document, _config, { io }) => {
         const { validateString } = await import("gltf-validator");
         const { json, resources } = await io.registerExtensions(ALL_EXTENSIONS).writeJSON(document);
         const report = await validateString(JSON.stringify(json), {
-            uri,
             ignoredIssues: ["UNSUPPORTED_EXTENSION"],
             maxIssues: 0,
             externalResourceFunction: async (resourceUri) => {
@@ -35,7 +30,7 @@ const ValidateBlockDefinition = /* @__PURE__ */ defineBlock({
 
         let separator = "";
         if (report.issues.numErrors === 0) {
-            console.log(`\u2705 ${uri} is valid`);
+            console.log("\u2705 glTF is valid");
             separator = "\n";
         }
         for (const diagnostic of formatIssues(report.issues.messages)) {
@@ -44,13 +39,13 @@ const ValidateBlockDefinition = /* @__PURE__ */ defineBlock({
         }
 
         if (report.issues.numErrors > 0) {
-            throw new Error(`glTF validation failed for "${uri}" with ${report.issues.numErrors} error(s).`);
+            throw new Error(`glTF validation failed with ${report.issues.numErrors} error(s).`);
         }
         return document;
     },
 });
 
-/** Options for the block, its input document, and a diagnostic URI label (default: scene.glb). */
+/** Options for naming the block or supplying its initial input. */
 export type ValidateBlockOptions = BlockOptions<typeof ValidateBlockDefinition>;
 
 /** Validates a document, logs grouped diagnostics, and rejects execution on validation errors. */

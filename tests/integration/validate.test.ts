@@ -24,24 +24,22 @@ describe("document validation", () => {
 
         expect(result).toBe(document);
         expect(await io.writeJSON(document)).toEqual(before);
-        expect(readOutput()).toBe("\u2705 scene.glb is valid");
+        expect(readOutput()).toBe("\u2705 glTF is valid");
     });
 
-    it("prints the URI label and groups informational issues by message and location", async () => {
+    it("groups informational issues by message and location", async () => {
         const document = await new NodeIO().readJSON({ json: JSON.parse(generateGltfJson()), resources: {} });
         document.createNode();
         document.createNode();
         const readOutput = captureOutput();
 
-        const result = await new NodeAsset({ name: "grouped-diagnostics", outputBlock: new ValidateBlock({ input: document, uri: "box%20(1).glb" }) }).executeAsync();
+        const result = await new NodeAsset({ name: "grouped-diagnostics", outputBlock: new ValidateBlock({ input: document }) }).executeAsync();
 
         expect(result).toBe(document);
         expect(readOutput()).toBe(
-            [
-                "\u2705 box%20(1).glb is valid",
-                "[Warning] This object may be unused.\n  at /nodes/2\n  at /nodes/1",
-                "[Warning] Empty node encountered.\n  at /nodes/2\n  at /nodes/1",
-            ].join("\n\n")
+            ["\u2705 glTF is valid", "[Warning] This object may be unused.\n  at /nodes/2\n  at /nodes/1", "[Warning] Empty node encountered.\n  at /nodes/2\n  at /nodes/1"].join(
+                "\n\n"
+            )
         );
     });
 
@@ -56,7 +54,7 @@ describe("document validation", () => {
         const result = await new NodeAsset({ name: "warning", outputBlock: new ValidateBlock({ input: document }) }).executeAsync();
 
         expect(result).toBe(document);
-        expect(readOutput()).toBe("\u2705 scene.glb is valid\n\n[Warning] Image format not recognized.\n  at /images/0");
+        expect(readOutput()).toBe("\u2705 glTF is valid\n\n[Warning] Image format not recognized.\n  at /images/0");
     });
 
     it("logs warnings and informational issues even when validation fails", async () => {
@@ -146,7 +144,7 @@ describe("document validation", () => {
 
         expect(result).toBe(document);
         expect(result.hasExtension(extension.extensionName)).toBe(true);
-        expect(readOutput()).toBe("\u2705 scene.glb is valid");
+        expect(readOutput()).toBe("\u2705 glTF is valid");
     });
 
     it("validates supported extensions on a directly supplied document", async () => {
