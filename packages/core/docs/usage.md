@@ -39,15 +39,17 @@ See the [CLI guide](../../cli/README.md) for command syntax.
 
 # Example: Compressing GLB
 
-Same as before, but now add KTX2 texture encoding and Draco geometry encoding.
+Same as before, but now cap texture dimensions before KTX2 texture encoding and Draco geometry encoding.
 
 ```ts
 const source = new GltfInputBlock({ input: "https://assets.babylonjs.com/meshes/box.glb" });
+const clampTextures = new ClampTextureSizeBlock();
 const encodeTextures = new EncodeKTX2Block();
 const encodeGeometry = new EncodeDracoBlock();
 const destination = new GltfOutputBlock();
 
-source.output.connectTo(encodeTextures.input);
+source.output.connectTo(clampTextures.input);
+clampTextures.output.connectTo(encodeTextures.input);
 encodeTextures.output.connectTo(encodeGeometry.input);
 encodeGeometry.output.connectTo(destination.input);
 
@@ -58,6 +60,28 @@ const asset = new NodeAsset({
 
 const result = await asset.executeAsync();
 ```
+
+# Clamping texture sizes
+
+`ClampTextureSizeBlock` proportionally reduces PNG, JPEG, WebP, and ordinary 2D LDR KTX2 textures so neither dimension exceeds `maxSize`. The default is 2048 pixels.
+
+```ts
+const clampTextures = new ClampTextureSizeBlock({ maxSize: 1024 });
+```
+
+`maxSize` must be a finite positive integer; invalid values throw when constructing the block. Resized dimensions are rounded to the nearest pixel, with a minimum of one pixel. Textures already within the limit are left byte-identical and are never upscaled. Missing images and unsupported MIME types are left unchanged.
+
+When processing requires decoding an image, decode failures reject the pipeline. In-cap KTX2 textures receive structural inspection without decoding their compressed payload; this block is not a full KTX2 validator.
+
+Node uses Sharp for PNG, JPEG, and WebP. JPEG resizing applies EXIF orientation before reducing the image dimensions. Browsers require `createImageBitmap` and a 2D canvas capable of encoding the original format; unsupported encoding rejects the pipeline rather than silently changing the format.
+
+KTX2 resizing uses decoded top-level RGBA pixels without a PNG intermediary and re-encodes the texture as KTX2. ETC1S sources remain ETC1S and UASTC sources remain UASTC. The original linear or sRGB transfer function and alpha are preserved. If the source contains mipmaps, the encoder rebuilds them from the resized top level.
+
+Both environments use the same KTX2 pixel-processing implementation. Downsampling averages the source area covered by each output pixel, weighting color by alpha to prevent transparent-edge color bleed. Large reductions yield periodically to let other JavaScript tasks run. Filtering operates on the stored channel values, without linear-light conversion or normal-map renormalization.
+
+Oversized cubemaps, arrays, 3D textures, HDR textures, native compressed formats, and premultiplied-alpha KTX2 textures reject the pipeline. Re-encoding is lossy and does not preserve KTX2 container metadata or encoder tuning.
+
+Resizing preserves the texture's MIME type, transparency, name, URI, extras, and material references. Resampling and re-encoding can change pixel values. A resize may be used before or after `EncodeKTX2Block`.
 
 # Encoding KTX2 textures
 

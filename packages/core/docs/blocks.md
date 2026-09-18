@@ -26,6 +26,12 @@
 
 # Transforms
 
+- `ClampTextureSizeBlock`
+    - Input: `Document`
+    - Output: `Document`
+    - Config: `maxSize`, a finite positive integer with a default of 2048
+    - Uses: `RasterImageCodecResource`; `KTX2DecoderResource` and `KTX2EncoderResource` for KTX2; `PlatformIOResource` for KHR_texture_basisu registration
+    - Behavior: Downsizes textures to fit `maxSize`, preserving aspect ratio and format. See [clamping texture sizes](usage.md#clamping-texture-sizes) for details.
 - `ValidateBlock`
     - Input: `Document`
     - Output: the same `Document`
