@@ -131,7 +131,7 @@ export class OutputPort<TType extends ConnectionPointType<unknown>> {
 function resolveConfig<TConfig extends ConfigDefinition>(config: TConfig, options: Readonly<Record<string, unknown>> | undefined): ConfigValues<TConfig> {
     const values: Record<string, unknown> = {};
     for (const [name, descriptor] of Object.entries(config)) {
-        const value = options?.[name] ?? descriptor.defaultValue;
+        const value = options?.[name] === undefined ? descriptor.defaultValue : options[name];
         if (!descriptor.is(value)) {
             throw new Error(`Invalid value for config "${name}".`);
         }

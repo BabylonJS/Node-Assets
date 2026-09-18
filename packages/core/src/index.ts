@@ -5,6 +5,7 @@ export { FbxInputBlock } from "./blocks/fbxInputBlock";
 export { GltfInputBlock } from "./blocks/gltfInputBlock";
 export { GltfOutputBlock, type GltfOutputBlockOptions } from "./blocks/gltfOutputBlock";
 export { ObjInputBlock } from "./blocks/objInputBlock";
+export { ClampTextureSizeBlock, type ClampTextureSizeBlockOptions } from "./blocks/clampTextureSizeBlock";
 export { StlInputBlock } from "./blocks/stlInputBlock";
 export { ValidateBlock, type ValidateBlockOptions } from "./blocks/validateBlock";
 export { NodeAsset } from "./nodeAsset";

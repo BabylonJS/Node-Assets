@@ -3,6 +3,8 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { pathToFileURL } from "node:url";
 
+import { Document } from "@gltf-transform/core";
+import { encodeToKTX2 } from "babylonpress-ktx2-encoder";
 import { build, type Plugin } from "vite";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -39,6 +41,10 @@ describe("browser consumer bundle", () => {
         expect(transformedModuleIds).toContain(PublishedEntryPath);
         expect(fileNames.some((fileName) => /draco_decoder_gltf.*\.wasm$/.test(fileName))).toBe(true);
         expect(fileNames.some((fileName) => /draco_encoder.*\.wasm$/.test(fileName))).toBe(true);
+        expect(fileNames.some((fileName) => /msc_basis_transcoder.*\.wasm$/.test(fileName))).toBe(true);
+        expect(fileNames.some((fileName) => /uastc_rgba8_srgb_v2.*\.wasm$/.test(fileName))).toBe(true);
+        expect(fileNames.some((fileName) => /uastc_rgba8_unorm_v2.*\.wasm$/.test(fileName))).toBe(true);
+        expect(fileNames.some((fileName) => /zstddec.*\.wasm$/.test(fileName))).toBe(true);
         expect(fileNames.some((fileName) => /basis_encoder.*\.js$/.test(fileName))).toBe(true);
         expect(fileNames.some((fileName) => /basis_encoder.*\.wasm$/.test(fileName))).toBe(true);
     }, 120_000);
@@ -102,6 +108,38 @@ describe("browser consumer bundle", () => {
         } finally {
             vi.unstubAllGlobals();
         }
+    });
+
+    it("resizes KTX2 through the published Node entry", async () => {
+        const width = 32;
+        const height = 16;
+        const data = new Uint8Array(width * height * 4);
+        for (let offset = 0; offset < data.length; offset += 4) {
+            data[offset] = offset % 251;
+            data[offset + 1] = (offset * 3) % 251;
+            data[offset + 2] = (offset * 7) % 251;
+            data[offset + 3] = offset % 8 === 0 ? 128 : 255;
+        }
+        const image = await encodeToKTX2(new Uint8Array(), {
+            imageDecoder: async () => ({ data, height, width }),
+            isHDR: false,
+            isPerceptual: true,
+            isSetKTX2SRGBTransferFunc: true,
+            isUASTC: false,
+        });
+        const document = new Document();
+        const texture = document.createTexture().setMimeType("image/ktx2").setImage(image);
+        const { ClampTextureSizeBlock, NodeAsset } = (await import(`${pathToFileURL(PublishedEntryPath).href}?test=ktx2-${Date.now()}`)) as typeof NodeAssets;
+
+        await new NodeAsset({
+            name: "published-node-ktx2-resize",
+            outputBlock: new ClampTextureSizeBlock({ input: document, maxSize: 8 }),
+        }).executeAsync();
+
+        const output = texture.getImage();
+        expect(output).not.toBeNull();
+        const header = new DataView(output!.buffer, output!.byteOffset, output!.byteLength);
+        expect([header.getUint32(20, true), header.getUint32(24, true)]).toEqual([8, 4]);
     });
 });
 
