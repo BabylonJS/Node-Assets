@@ -34,8 +34,8 @@
 - `EncodeKTX2Block`
     - Input: `Document`
     - Output: `Document` (but in future should be type that locks images and/or textures)
-    - Uses: `encodeToKTX2` (`babylonpress-ktx2-encoder`); `sharp` (Node.js only)
-    - Behavior: Compresses textures to KTX2 using encoder defaults, preserving color-space and normal-map semantics.
+    - Uses: `RasterImageCodecResource`, `KTX2EncoderResource`, and `PlatformIOResource`
+    - Behavior: Compresses compatible textures to KTX2, inferring encoding from material usage.
 - `EncodeDracoBlock`
     - Input: `Document`
     - Output: `Document` (but in future should be type that locks geometry)
