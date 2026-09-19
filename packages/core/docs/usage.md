@@ -16,11 +16,10 @@ const asset = new NodeAsset({
 const result = await asset.executeAsync();
 ```
 
-# Input locations and dependencies
+# Input locations
 
 All input blocks accept HTTP(S) URLs and, in Node, filesystem paths and `file:` URLs.
-Relative paths use the working directory. STL, OBJ, and FBX use Babylon's standard
-dependency resolution. The CLI accepts only glTF/GLB.
+Relative paths use the working directory.
 
 # Example: CLI run reports
 
