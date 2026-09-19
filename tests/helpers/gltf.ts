@@ -34,7 +34,7 @@ export function generateTexturedGltfJson(): string {
     });
 }
 
-export function generateGlbDataUri(): string {
+export function generateGlbData(): Uint8Array<ArrayBuffer> {
     const gltf = JSON.parse(generateGltfJson()) as {
         buffers: Array<{ byteLength: number; uri?: string }>;
     };
@@ -67,7 +67,7 @@ export function generateGlbDataUri(): string {
     header.setUint32(binaryChunkOffset + 4, 0x004e4942, true);
     glb.set(binary, binaryChunkOffset + 8);
 
-    return `data:model/gltf-binary;base64,${toBase64(glb)}`;
+    return glb;
 }
 
 export function generateGltfJson(): string {
@@ -94,25 +94,4 @@ export function generateGltfJson(): string {
         scene: 0,
         scenes: [{ nodes: [0] }],
     });
-}
-
-export function decodeDataUri(dataUri: string): string | ArrayBuffer {
-    if (dataUri.startsWith("data:{")) {
-        return dataUri.slice("data:".length);
-    }
-
-    const separator = dataUri.indexOf(",");
-    const payload = dataUri.slice(separator + 1);
-    if (!dataUri.slice(0, separator).endsWith(";base64")) {
-        return payload;
-    }
-    return Uint8Array.from(atob(payload), (character) => character.charCodeAt(0)).buffer;
-}
-
-function toBase64(data: Uint8Array): string {
-    let binary = "";
-    for (const byte of data) {
-        binary += String.fromCharCode(byte);
-    }
-    return btoa(binary);
 }

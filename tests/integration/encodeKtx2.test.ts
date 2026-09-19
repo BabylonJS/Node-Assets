@@ -6,6 +6,7 @@ import { EncodeKTX2Block, FbxInputBlock, GltfInputBlock, GltfOutputBlock, NodeAs
 import { generateTexturedFbxDataWithUvs } from "../helpers/fbx";
 import { expectKtx2Image, getTextureImageIndex, parseGlbAsync } from "../helpers/glb";
 import { generateTexturedGltfJson } from "../helpers/gltf";
+import { withHttpInputsAsync } from "../helpers/input";
 import { generateMtlData, generateTexturedObjData, generateTextureData } from "../helpers/obj";
 
 describe("KTX2 encoding", () => {
@@ -53,64 +54,35 @@ describe("KTX2 encoding", () => {
     });
 
     it("leaves a texture shared by color and normal slots unchanged", async () => {
-        const rootUrl = "https://example.com/assets/model.obj";
-        const mtlUrl = "https://example.com/assets/materials/model.mtl";
-        const textureUrl = "https://example.com/assets/materials/textures/diffuse.png";
-        vi.stubGlobal(
-            "fetch",
-            vi.fn((input: string | URL | Request) => {
-                switch (String(input)) {
-                    case rootUrl:
-                        return Promise.resolve(new Response(generateTexturedObjData()));
-                    case mtlUrl:
-                        return Promise.resolve(new Response(generateMtlData()));
-                    case textureUrl:
-                        return Promise.resolve(new Response(generateTextureData().buffer as ArrayBuffer));
-                    default:
-                        return Promise.reject(new Error(`Unexpected fetch: ${String(input)}`));
-                }
-            })
+        await withHttpInputsAsync(
+            {
+                "model.obj": generateTexturedObjData("model.mtl"),
+                "model.mtl": generateMtlData(),
+                "textures/diffuse.png": generateTextureData(),
+            },
+            async (rootUrl) => {
+                const source = new ObjInputBlock({ input: `${rootUrl}model.obj` });
+                const encoder = new EncodeKTX2Block();
+                const destination = new GltfOutputBlock();
+                source.output.connectTo(encoder.input);
+                encoder.output.connectTo(destination.input);
+
+                const parsed = await parseGlbAsync(await new NodeAsset({ name: "shared-texture-encoding", outputBlock: destination }).executeAsync());
+                const material = parsed.json.materials?.[0];
+                const colorImageIndex = getTextureImageIndex(parsed, material?.pbrMetallicRoughness?.baseColorTexture?.index);
+                const normalImageIndex = getTextureImageIndex(parsed, material?.normalTexture?.index);
+
+                expect(parsed.json.images).toHaveLength(1);
+                expect(colorImageIndex).toBe(normalImageIndex);
+                expect(parsed.json.images?.[0]?.mimeType).toBe("image/png");
+                expect(parsed.json.extensionsUsed ?? []).not.toContain("KHR_texture_basisu");
+            }
         );
-
-        try {
-            const source = new ObjInputBlock({ input: rootUrl });
-            const encoder = new EncodeKTX2Block();
-            const destination = new GltfOutputBlock();
-            source.output.connectTo(encoder.input);
-            encoder.output.connectTo(destination.input);
-
-            const parsed = await parseGlbAsync(await new NodeAsset({ name: "shared-texture-encoding", outputBlock: destination }).executeAsync());
-            const material = parsed.json.materials?.[0];
-            const colorImageIndex = getTextureImageIndex(parsed, material?.pbrMetallicRoughness?.baseColorTexture?.index);
-            const normalImageIndex = getTextureImageIndex(parsed, material?.normalTexture?.index);
-
-            expect(parsed.json.images).toHaveLength(1);
-            expect(colorImageIndex).toBe(normalImageIndex);
-            expect(parsed.json.images?.[0]?.mimeType).toBe("image/png");
-            expect(parsed.json.extensionsUsed ?? []).not.toContain("KHR_texture_basisu");
-        } finally {
-            vi.unstubAllGlobals();
-        }
     });
 
     it("encodes a texture from an FBX input", async () => {
-        const rootUrl = "https://example.com/model.fbx";
-        const textureUrl = "https://example.com/textures/diffuse.png";
-        vi.stubGlobal(
-            "fetch",
-            vi.fn((input: string | URL | Request) => {
-                if (String(input) === rootUrl) {
-                    return Promise.resolve(new Response(generateTexturedFbxDataWithUvs("textures/diffuse.png")));
-                }
-                if (String(input) === textureUrl) {
-                    return Promise.resolve(new Response(generateTextureData().buffer as ArrayBuffer, { headers: { "content-type": "image/png" } }));
-                }
-                return Promise.reject(new Error(`Unexpected fetch: ${String(input)}`));
-            })
-        );
-
-        try {
-            const source = new FbxInputBlock({ input: rootUrl });
+        await withHttpInputsAsync({ "model.fbx": generateTexturedFbxDataWithUvs("textures/diffuse.png"), "textures/diffuse.png": generateTextureData() }, async (rootUrl) => {
+            const source = new FbxInputBlock({ input: `${rootUrl}model.fbx` });
             const encoder = new EncodeKTX2Block();
             const destination = new GltfOutputBlock();
             source.output.connectTo(encoder.input);
@@ -120,9 +92,7 @@ describe("KTX2 encoding", () => {
 
             expect(parsed.json.images).toHaveLength(1);
             expectKtx2Image(parsed);
-        } finally {
-            vi.unstubAllGlobals();
-        }
+        });
     });
 
     it("appends .ktx2 to extensionless texture URIs without collisions", async () => {

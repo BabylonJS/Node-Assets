@@ -1,13 +1,14 @@
+import type { ISceneLoaderPluginFactory } from "@babylonjs/core/Loading/sceneLoader.js";
 import { STLFileLoaderMetadata } from "@babylonjs/loaders/STL/stlFileLoader.metadata.js";
 
 import { GltfDocumentType } from "../connectionPoints/gltfDocument";
 import { UrlType } from "../connectionPoints/url";
 import { convertBabylonSceneToDocumentAsync } from "../helpers/convertBabylonSceneToDocument";
+import { loadSceneWithPluginAsync } from "../helpers/loadSceneWithPlugin";
 import { NullEngineResource } from "../resources/nullEngineResource";
 import { PlatformIOResource } from "../resources/platformIOResource";
 import { Block, type BlockOptions } from "./block";
 import { defineBlock } from "./blockDefinition";
-import { loadSingleFileSceneWithPluginAsync, type SceneLoaderPluginFactory } from "../helpers/loadSceneWithPlugin";
 
 const StlLoaderFactory = {
     ...STLFileLoaderMetadata,
@@ -19,7 +20,7 @@ const StlLoaderFactory = {
         RegisterStandardMaterial();
         return new STLFileLoader();
     },
-} satisfies SceneLoaderPluginFactory;
+} satisfies ISceneLoaderPluginFactory;
 
 const StlInputBlockDefinition = /* @__PURE__ */ defineBlock({
     type: "input.stl",
@@ -31,14 +32,14 @@ const StlInputBlockDefinition = /* @__PURE__ */ defineBlock({
     },
     runAsync: async (url, _config, { engine, io }) =>
         convertBabylonSceneToDocumentAsync(
-            await loadSingleFileSceneWithPluginAsync(url, engine, StlLoaderFactory, {
+            await loadSceneWithPluginAsync(url, engine, StlLoaderFactory, {
                 pluginExtension: ".stl",
             }),
             io
         ),
 });
 
-/** Loads an STL URL. */
+/** Loads an STL URL or Node filesystem path. */
 export class StlInputBlock extends Block<typeof StlInputBlockDefinition> {
     public constructor(options?: BlockOptions<typeof StlInputBlockDefinition>) {
         super(StlInputBlockDefinition, options);

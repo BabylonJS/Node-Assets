@@ -16,6 +16,11 @@ const asset = new NodeAsset({
 const result = await asset.executeAsync();
 ```
 
+# Input locations
+
+All input blocks accept HTTP(S) URLs and, in Node, filesystem paths and `file:` URLs.
+Relative paths use the working directory.
+
 # Example: CLI run reports
 
 ```sh

@@ -1,7 +1,6 @@
 import { readFile, readdir } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { pathToFileURL } from "node:url";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { build, type Plugin } from "vite";
 import { beforeAll, describe, expect, it, vi } from "vitest";
@@ -9,6 +8,8 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import type * as NodeAssets from "../../packages/core/src/index";
 import { parseGlbAsync } from "../helpers/glb";
 import { generateGltfJson } from "../helpers/gltf";
+import { withInputFilesAsync } from "../helpers/input";
+import { generateMtlData, generateTexturedObjData, generateTextureData } from "../helpers/obj";
 
 const ConsumerModuleId = "\0node-assets-browser-consumer";
 const PublishedPackageName = "@babylonjs/node-assets";
@@ -17,12 +18,12 @@ const PublishedEntryPath = fileURLToPath(new URL("../../packages/core/dist/index
 describe("browser consumer bundle", () => {
     beforeAll(buildLibrary, 120_000);
 
-    it("bundles the published entry without resolving Sharp", async () => {
+    it("bundles the published entry without resolving Node-only dependencies", async () => {
         const transformedModuleIds = new Set<string>();
         const result = await build({
             configFile: false,
             logLevel: "silent",
-            plugins: [rejectSharp(), createConsumerPlugin(), trackTransformedModules(transformedModuleIds)],
+            plugins: [rejectNodeOnlyDependencies(), createConsumerPlugin(), trackTransformedModules(transformedModuleIds)],
             build: {
                 assetsInlineLimit: 0,
                 rollupOptions: {
@@ -41,6 +42,17 @@ describe("browser consumer bundle", () => {
         expect(fileNames.some((fileName) => /draco_encoder.*\.wasm$/.test(fileName))).toBe(true);
         expect(fileNames.some((fileName) => /basis_encoder.*\.js$/.test(fileName))).toBe(true);
         expect(fileNames.some((fileName) => /basis_encoder.*\.wasm$/.test(fileName))).toBe(true);
+        const chunks = new Map(result.output.filter((entry) => entry.type === "chunk").map((chunk) => [chunk.fileName, chunk]));
+        const initialChunks = new Set([...chunks.values()].filter((chunk) => chunk.isEntry));
+        for (const chunk of initialChunks) {
+            expect(chunk.code.includes("xhr2")).toBe(false);
+            for (const importedFile of chunk.imports) {
+                const importedChunk = chunks.get(importedFile);
+                if (importedChunk) {
+                    initialChunks.add(importedChunk);
+                }
+            }
+        }
     }, 120_000);
 
     it("tree-shakes KTX2 decoder code from an encoder-only published consumer", async () => {
@@ -48,7 +60,7 @@ describe("browser consumer bundle", () => {
         const result = await build({
             configFile: false,
             logLevel: "silent",
-            plugins: [rejectSharp(), createEncoderOnlyConsumerPlugin(), trackTransformedModules(transformedModuleIds)],
+            plugins: [rejectNodeOnlyDependencies(), createEncoderOnlyConsumerPlugin(), trackTransformedModules(transformedModuleIds)],
             build: {
                 assetsInlineLimit: 0,
                 rollupOptions: {
@@ -103,6 +115,23 @@ describe("browser consumer bundle", () => {
             vi.unstubAllGlobals();
         }
     });
+
+    it("loads local OBJ dependencies through the published entry", async () => {
+        const { NodeAsset, ObjInputBlock } = (await import(pathToFileURL(PublishedEntryPath).href)) as typeof NodeAssets;
+        await withInputFilesAsync(
+            {
+                "model.obj": generateTexturedObjData("model.mtl"),
+                "model.mtl": generateMtlData(),
+                "textures/diffuse.png": generateTextureData(),
+            },
+            async (directory) => {
+                const document = await new NodeAsset({ name: "published-obj", outputBlock: new ObjInputBlock({ input: join(directory, "model.obj") }) }).executeAsync();
+
+                expect(document.getRoot().listMaterials()[0]?.getName()).toBe("Textured");
+                expect(document.getRoot().listTextures()[0]?.getImage()).toEqual(generateTextureData());
+            }
+        );
+    });
 });
 
 async function buildLibrary(): Promise<void> {
@@ -141,13 +170,13 @@ function createEncoderOnlyConsumerPlugin(): Plugin {
     };
 }
 
-function rejectSharp(): Plugin {
+function rejectNodeOnlyDependencies(): Plugin {
     return {
-        name: "node-assets-reject-sharp",
+        name: "node-assets-reject-node-only-dependencies",
         enforce: "pre",
         resolveId(id) {
-            if (id === "sharp") {
-                throw new Error("Browser consumer attempted to resolve sharp");
+            if (id === "sharp" || id === "xhr2") {
+                throw new Error(`Browser consumer attempted to resolve ${id}`);
             }
         },
     };

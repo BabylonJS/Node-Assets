@@ -5,21 +5,21 @@
 ## Inputs
 
 - `FbxInputBlock`
-    - Input: `string` which is a URL (HTTPS or data) that points to an FBX file.
+    - Input: `string` HTTP(S) or data URL, or a Node filesystem path/file URL, pointing to an FBX file.
     - Output: `Document`
     - Uses: Babylon FBX loader
     - Behavior: Uses the Babylon scene loader to load an FBX using NullEngine, exports it as a GLB, then reimports the bytes as a `Document`.
 - `GltfInputBlock`
-    - Input: `string` URI accepted by the current `PlatformIO` that points to a glTF or GLB.
+    - Input: `string` URI accepted by the current `PlatformIO`, or a Node filesystem path/file URL, pointing to a glTF or GLB.
     - Output: `Document`
     - Behavior: Reads glTF or GLB into a `Document`, using glTF Transform's default extension handling.
 - `ObjInputBlock`
-    - Input: `string` which is a URL (HTTPS or data) that points to an OBJ file.
+    - Input: `string` HTTP(S) or data URL, or a Node filesystem path/file URL, pointing to an OBJ file.
     - Output: `Document`
     - Uses: Babylon OBJ loader
     - Behavior: Uses the Babylon scene loader to load an OBJ using NullEngine, exports it as a GLB, then reimports the bytes as a `Document`.
 - `StlInputBlock`
-    - Input: `string` which is a URL (HTTPS or data) that points to an STL file.
+    - Input: `string` HTTP(S) or data URL, or a Node filesystem path/file URL, pointing to an STL file.
     - Output: `Document`
     - Uses: Babylon STL loader
     - Behavior: Uses the Babylon scene loader to load an STL using NullEngine, exports it as a GLB, then reimports the bytes as a `Document`.
