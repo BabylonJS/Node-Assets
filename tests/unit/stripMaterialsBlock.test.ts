@@ -2,7 +2,7 @@ import { Document } from "@gltf-transform/core";
 import { EXTMeshFeatures, KHRMaterialsClearcoat, KHRMaterialsVariants, KHRTextureBasisu, KHRTextureTransform, KHRXMP } from "@gltf-transform/extensions";
 import { describe, expect, it } from "vitest";
 
-import { NodeAsset, StripMaterialsBlock } from "../../src/index";
+import { NodeAsset, StripMaterialsBlock } from "../../packages/core/src/index";
 
 describe("StripMaterialsBlock", () => {
     it("removes every material and only textures made unused by their deletion", async () => {
