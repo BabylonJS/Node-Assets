@@ -4,8 +4,6 @@
 
 ## Inputs
 
-See [input locations](usage.md#input-locations) for supported sources.
-
 - `FbxInputBlock`
     - Input: `string` HTTP(S) or data URL, or a Node filesystem path/file URL, pointing to an FBX file.
     - Output: `Document`
