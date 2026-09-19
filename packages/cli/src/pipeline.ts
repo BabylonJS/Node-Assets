@@ -18,6 +18,11 @@ export function getPipelineDefinitions() {
         ],
         operations: [
             {
+                name: "validate",
+                description: "Validate the file and fail on errors",
+                create: (library: typeof NodeAssets) => new library.ValidateBlock(),
+            },
+            {
                 name: "draco",
                 description: "Compress geometry with Draco",
                 create: (library: typeof NodeAssets) => new library.EncodeDracoBlock(),

@@ -37,6 +37,10 @@ Runtime data is passed by reference.
 
 Resources are reusable values owned by a pipeline execution's resource scope, such as a shared `PlatformIO` instance. They are created on demand and shared by blocks within that execution. Blocks borrow resources; the scope retains them until execution completes or fails, then performs any required cleanup and releases its references.
 
+`RasterImageCodecResource` provides `NodeRasterImageCodec` (Sharp) or `WebRasterImageCodec` (browser APIs).
+
+`KTX2DecoderResource` and `KTX2EncoderResource` load their codec dependencies independently, on first use. Decoded images carry their source encoding settings through pixel edits.
+
 Worker-backed encoding is future work.
 
 # Blocks

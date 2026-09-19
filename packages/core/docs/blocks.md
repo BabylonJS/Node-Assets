@@ -29,11 +29,16 @@ for the shared Node filesystem contract and Babylon dependency limitations.
 
 # Transforms
 
+- `ValidateBlock`
+    - Input: `Document`
+    - Output: the same `Document`
+    - Uses: `gltf-validator`; execution-scoped `PlatformIO`
+    - Behavior: Validates the document, throwing on errors and logging other issues. Ignores `UNSUPPORTED_EXTENSION`.
 - `EncodeKTX2Block`
     - Input: `Document`
     - Output: `Document` (but in future should be type that locks images and/or textures)
-    - Uses: `encodeToKTX2` (`babylonpress-ktx2-encoder`); `sharp` (Node.js only)
-    - Behavior: Compresses textures to KTX2 using encoder defaults, preserving color-space and normal-map semantics.
+    - Uses: `RasterImageCodecResource`, `KTX2EncoderResource`, and `PlatformIOResource`
+    - Behavior: Compresses compatible textures to KTX2, inferring encoding from material usage.
 - `EncodeDracoBlock`
     - Input: `Document`
     - Output: `Document` (but in future should be type that locks geometry)

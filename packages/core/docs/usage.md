@@ -86,6 +86,15 @@ const asset = new NodeAsset({
 const result = await asset.executeAsync();
 ```
 
+# Encoding KTX2 textures
+
+`EncodeKTX2Block` infers encoding from material usage:
+
+- Color textures use ETC1S with an sRGB transfer function.
+- Normal and other data textures use UASTC with a linear transfer function.
+- Unused textures default to UASTC and linear.
+- Textures shared across color, normal, or other data categories remain unchanged.
+
 # Creating blocks
 
 ```ts

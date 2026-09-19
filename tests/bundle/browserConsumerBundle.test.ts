@@ -1,6 +1,6 @@
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { pathToFileURL } from "node:url";
+import { readFile, readdir } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { build, type Plugin } from "vite";
 import { beforeAll, describe, expect, it, vi } from "vitest";
@@ -40,9 +40,46 @@ describe("browser consumer bundle", () => {
         expect(transformedModuleIds).toContain(PublishedEntryPath);
         expect(fileNames.some((fileName) => /draco_decoder_gltf.*\.wasm$/.test(fileName))).toBe(true);
         expect(fileNames.some((fileName) => /draco_encoder.*\.wasm$/.test(fileName))).toBe(true);
+        expect(fileNames.some((fileName) => /basis_encoder.*\.js$/.test(fileName))).toBe(true);
+        expect(fileNames.some((fileName) => /basis_encoder.*\.wasm$/.test(fileName))).toBe(true);
     }, 120_000);
 
-    // TODO: Execute the published entry in a real browser once browser integration testing is available.
+    it("tree-shakes KTX2 decoder code from an encoder-only published consumer", async () => {
+        const transformedModuleIds = new Set<string>();
+        const result = await build({
+            configFile: false,
+            logLevel: "silent",
+            plugins: [rejectNodeOnlyDependencies(), createEncoderOnlyConsumerPlugin(), trackTransformedModules(transformedModuleIds)],
+            build: {
+                assetsInlineLimit: 0,
+                rollupOptions: {
+                    input: "node-assets:encoder-only-browser-consumer",
+                },
+                write: false,
+            },
+        });
+        if (Array.isArray(result) || !("output" in result)) {
+            throw new Error("Expected one consumer bundle");
+        }
+
+        const fileNames = result.output.map(({ fileName }) => fileName);
+        const publishedFiles = await readdir(dirname(PublishedEntryPath));
+        const encoderFactory = await readFile(new URL("../../node_modules/babylonpress-ktx2-encoder/dist/basis/basis_encoder.js", import.meta.url));
+        const publishedScripts = await Promise.all(
+            publishedFiles.filter((fileName) => fileName.endsWith(".js")).map((fileName) => readFile(resolve(dirname(PublishedEntryPath), fileName)))
+        );
+        expect(transformedModuleIds).toContain(PublishedEntryPath);
+        expect(publishedScripts.some((script) => script.equals(encoderFactory))).toBe(false);
+        expect(publishedFiles.some((fileName) => /basis_encoder.*\.wasm$/.test(fileName))).toBe(true);
+        expect(fileNames.some((fileName) => /basis_encoder.*\.js$/.test(fileName))).toBe(true);
+        expect(fileNames.some((fileName) => /basis_encoder.*\.wasm$/.test(fileName))).toBe(true);
+        const chunks = result.output.filter((entry) => entry.type === "chunk");
+        // Vite can emit unreferenced assets during module scanning; check the executable output graph.
+        expect(chunks.some((chunk) => Object.keys(chunk.modules).some((id) => id.includes("babylonpress-ktx2-encoder")))).toBe(true);
+        expect(chunks.some((chunk) => Object.keys(chunk.modules).some((id) => id.includes("ktx2Decoder") || id.includes("@babylonjs/ktx2decoder")))).toBe(false);
+        expect(chunks.some((chunk) => chunk.dynamicImports.some((id) => /ktx2Decoder|msc-transcoder/.test(id)))).toBe(false);
+    }, 120_000);
+
     it("runs the published entry in Node", async () => {
         const url = "https://example.com/model.gltf";
         vi.stubGlobal(
@@ -51,14 +88,16 @@ describe("browser consumer bundle", () => {
         );
 
         try {
-            const { EncodeDracoBlock, GltfInputBlock, GltfOutputBlock, NodeAsset } = (await import(
+            const { EncodeDracoBlock, GltfInputBlock, GltfOutputBlock, NodeAsset, ValidateBlock } = (await import(
                 `${pathToFileURL(PublishedEntryPath).href}?test=${Date.now()}`
             )) as typeof NodeAssets;
             const source = new GltfInputBlock({ input: url });
             const encoder = new EncodeDracoBlock();
+            const validate = new ValidateBlock();
             const destination = new GltfOutputBlock();
             source.output.connectTo(encoder.input);
-            encoder.output.connectTo(destination.input);
+            encoder.output.connectTo(validate.input);
+            validate.output.connectTo(destination.input);
 
             await parseGlbAsync(await new NodeAsset({ name: "published-node-entry", outputBlock: destination }).executeAsync());
         } finally {
@@ -100,6 +139,21 @@ function createConsumerPlugin(): Plugin {
                 ? `
                     import * as nodeAssets from ${JSON.stringify(PublishedPackageName)};
                     globalThis.nodeAssets = nodeAssets;
+                `
+                : undefined,
+    };
+}
+
+function createEncoderOnlyConsumerPlugin(): Plugin {
+    const moduleId = "\0node-assets-encoder-only-browser-consumer";
+    return {
+        name: "node-assets-encoder-only-browser-consumer",
+        resolveId: (id) => (id === "node-assets:encoder-only-browser-consumer" ? moduleId : undefined),
+        load: (id) =>
+            id === moduleId
+                ? `
+                    import { EncodeKTX2Block } from ${JSON.stringify(PublishedPackageName)};
+                    globalThis.EncodeKTX2Block = EncodeKTX2Block;
                 `
                 : undefined,
     };

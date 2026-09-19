@@ -53,7 +53,7 @@ describe("KTX2 encoding", () => {
         }
     });
 
-    it("encodes a texture shared by color and normal slots once", async () => {
+    it("leaves a texture shared by color and normal slots unchanged", async () => {
         await withHttpInputsAsync(
             {
                 "model.obj": generateTexturedObjData("model.mtl"),
@@ -74,7 +74,8 @@ describe("KTX2 encoding", () => {
 
                 expect(parsed.json.images).toHaveLength(1);
                 expect(colorImageIndex).toBe(normalImageIndex);
-                expectKtx2Image(parsed);
+                expect(parsed.json.images?.[0]?.mimeType).toBe("image/png");
+                expect(parsed.json.extensionsUsed ?? []).not.toContain("KHR_texture_basisu");
             }
         );
     });
@@ -109,6 +110,51 @@ describe("KTX2 encoding", () => {
         ).toEqual(["albedo.ktx2", "normal.ktx2"]);
     });
 
+    it.each([
+        {
+            name: "color",
+            attach: (document: Document, texture: ReturnType<Document["createTexture"]>) => document.createMaterial().setBaseColorTexture(texture),
+            expected: { mode: 163, transfer: 2, supercompression: 1 },
+        },
+        {
+            name: "normal",
+            attach: (document: Document, texture: ReturnType<Document["createTexture"]>) => document.createMaterial().setNormalTexture(texture),
+            expected: { mode: 166, transfer: 1, supercompression: 2 },
+        },
+        {
+            name: "data",
+            attach: (document: Document, texture: ReturnType<Document["createTexture"]>) => document.createMaterial().setOcclusionTexture(texture),
+            expected: { mode: 166, transfer: 1, supercompression: 2 },
+        },
+        {
+            name: "unused",
+            attach: () => {},
+            expected: { mode: 166, transfer: 1, supercompression: 2 },
+        },
+    ])("infers $name texture encoding from usage", async ({ attach, expected }) => {
+        const document = new Document();
+        const texture = document.createTexture().setMimeType("image/png").setImage(generateTextureData());
+        attach(document, texture);
+
+        await new NodeAsset({ name: "inferred-ktx2-options", outputBlock: new EncodeKTX2Block({ input: document }) }).executeAsync();
+
+        expect(readKtx2Encoding(texture.getImage()!)).toEqual(expected);
+    });
+
+    it("leaves a texture shared by normal and other data slots unchanged", async () => {
+        const document = new Document();
+        const image = generateTextureData();
+        const texture = document.createTexture().setMimeType("image/png").setImage(image);
+        const material = document.createMaterial().setNormalTexture(texture).setOcclusionTexture(texture);
+
+        await new NodeAsset({ name: "conflicting-data-usage", outputBlock: new EncodeKTX2Block({ input: document }) }).executeAsync();
+
+        expect(material.getNormalTexture()).toBe(texture);
+        expect(material.getOcclusionTexture()).toBe(texture);
+        expect(texture.getImage()).toEqual(image);
+        expect(texture.getMimeType()).toBe("image/png");
+    });
+
     it("removes the WebP extension after converting every WebP texture", async () => {
         const document = new Document();
         document.createExtension(EXTTextureWebP).setRequired(true);
@@ -117,6 +163,17 @@ describe("KTX2 encoding", () => {
         const result = await new NodeAsset({ name: "remove-webp-extension", outputBlock: new EncodeKTX2Block({ input: document }) }).executeAsync();
 
         expect(result.hasExtension(EXTTextureWebP.EXTENSION_NAME)).toBe(false);
+    });
+
+    it("returns encoded texture bytes without retaining encoder scratch storage", async () => {
+        const document = new Document();
+        const texture = document.createTexture().setMimeType("image/png").setImage(generateTextureData());
+
+        await new NodeAsset({ name: "tight-ktx2-output", outputBlock: new EncodeKTX2Block({ input: document }) }).executeAsync();
+
+        const image = texture.getImage();
+        expect(image).not.toBeNull();
+        expect(image!.buffer.byteLength).toBe(image!.byteLength);
     });
 });
 
@@ -127,4 +184,14 @@ async function encodeGltfAsync(input: string): Promise<File> {
     source.output.connectTo(encoder.input);
     encoder.output.connectTo(destination.input);
     return new NodeAsset({ name: "encode-ktx2", outputBlock: destination }).executeAsync();
+}
+
+function readKtx2Encoding(image: Uint8Array): { readonly mode: number; readonly transfer: number; readonly supercompression: number } {
+    const header = new DataView(image.buffer, image.byteOffset, image.byteLength);
+    const dfdOffset = header.getUint32(48, true);
+    return {
+        mode: header.getUint8(dfdOffset + 12),
+        transfer: header.getUint8(dfdOffset + 14),
+        supercompression: header.getUint32(44, true),
+    };
 }
