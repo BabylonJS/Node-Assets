@@ -18,28 +18,9 @@ const result = await asset.executeAsync();
 
 # Input locations and dependencies
 
-All four input blocks accept HTTP(S) URLs, local filesystem paths, and file URLs in Node.
-Relative filesystem paths are relative to the working directory. The CLI still
-accepts only glTF and GLB inputs.
-
-STL, OBJ, and FBX use Babylon's standard scene loaders and dependency resolution.
-In Node, the library lazily installs an XMLHttpRequest implementation with
-HTTP(S) and filesystem support, unless the host has already supplied one. A
-host-supplied implementation must support the input locations being loaded.
-Browser loading uses the browser's XMLHttpRequest; filesystem paths are Node-only.
-HTTP redirects are followed, including relative redirect chains. This does not
-change Babylon's dependency-root behavior described below.
-
-OBJ and FBX materials and textures are loaded by Babylon, not rewritten or
-prefetched by the input blocks. Babylon's current limitations therefore apply:
-OBJ texture paths are relative to the OBJ directory, even when its MTL is in a
-subdirectory; redirects do not rebase dependency paths. Headless export requires
-encoded images that Babylon's serializer can preserve, such as PNG and JPEG.
-There is no automatic TGA/BMP/GIF conversion or extensionless-image MIME repair.
-
-STL, OBJ, and FBX also accept Babylon-supported data URIs. A data URI has no
-filesystem or HTTP base directory for relative dependencies. The glTF block
-continues to use PlatformIO and does not accept top-level data URIs in Node.
+All input blocks accept HTTP(S) URLs and, in Node, filesystem paths and `file:` URLs.
+Relative paths use the working directory. STL, OBJ, and FBX use Babylon's standard
+dependency resolution. The CLI accepts only glTF/GLB.
 
 # Example: CLI run reports
 
