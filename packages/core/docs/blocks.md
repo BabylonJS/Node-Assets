@@ -30,7 +30,7 @@
     - Input: `Document`
     - Output: `Document`
     - Uses: glTF Transform document graph
-    - Behavior: Removes every material and material assignment. Also removes textures and images made unused by material deletion, while preserving textures that were already unused or remain referenced elsewhere. Preserves unrelated glTF content.
+    - Behavior: Strips materials, assignments, and newly unused textures.
 - `ValidateBlock`
     - Input: `Document`
     - Output: the same `Document`
