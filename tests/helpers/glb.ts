@@ -8,6 +8,7 @@ export interface GlbJson {
         readonly byteOffset?: number;
         readonly extensions?: Readonly<Record<string, unknown>>;
     }>;
+    readonly extensions?: Readonly<Record<string, unknown>>;
     readonly extensionsRequired?: readonly string[];
     readonly extensionsUsed?: readonly string[];
     readonly images?: ReadonlyArray<{ readonly bufferView?: number; readonly mimeType?: string; readonly name?: string }>;
@@ -27,7 +28,9 @@ export interface GlbJson {
     }>;
     readonly meshes?: ReadonlyArray<{
         readonly primitives: ReadonlyArray<{
+            readonly attributes?: Readonly<Record<string, number>>;
             readonly extensions?: Readonly<Record<string, unknown>>;
+            readonly material?: number;
         }>;
     }>;
 }

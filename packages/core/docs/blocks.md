@@ -26,6 +26,11 @@
 
 # Transforms
 
+- `StripMaterialsBlock`
+    - Input: `Document`
+    - Output: `Document`
+    - Uses: glTF Transform document graph
+    - Behavior: Strips materials, assignments, and newly unused textures.
 - `ValidateBlock`
     - Input: `Document`
     - Output: the same `Document`

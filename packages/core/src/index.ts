@@ -1,3 +1,4 @@
+export { StripMaterialsBlock, type StripMaterialsBlockOptions } from "./blocks/stripMaterialsBlock";
 export { EncodeDracoBlock } from "./blocks/encodeDracoBlock";
 export { EncodeKTX2Block } from "./blocks/encodeKtx2Block";
 export { EncodeMeshoptBlock } from "./blocks/encodeMeshoptBlock";
