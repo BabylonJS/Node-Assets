@@ -30,6 +30,19 @@ deleted rather than preserved in a compatibility module.
   `textures/color.png`; the image resolves under `materials/textures/`, including
   after an MTL redirect. Absolute dependency URIs should remain absolute.
 
+## FBX texture filename escaping
+
+- Upstream target: `packages/dev/loaders/src/FBX/fbxFileLoader.pure.ts`,
+  `_getExternalTextureUrls`.
+- Missing behavior: external texture filenames are concatenated with the root
+  URL. A literal `?` in a filename becomes a query delimiter rather than part of
+  the filename.
+- Current limitation: an FBX reference to `diffuse?1.png` must use
+  `diffuse%3F1.png`. The generic file transport retains standard URL semantics;
+  it does not reinterpret query strings as filename characters.
+- Completion case: an FBX referencing a local `textures/diffuse?1.png` preserves
+  the image without requiring an escaped reference in the FBX.
+
 ## Encoded-image MIME handling in headless export
 
 - Upstream targets: `packages/dev/serializers/src/exportImageUtils.ts`,

@@ -42,6 +42,17 @@ describe("browser consumer bundle", () => {
         expect(fileNames.some((fileName) => /draco_encoder.*\.wasm$/.test(fileName))).toBe(true);
         expect(fileNames.some((fileName) => /basis_encoder.*\.js$/.test(fileName))).toBe(true);
         expect(fileNames.some((fileName) => /basis_encoder.*\.wasm$/.test(fileName))).toBe(true);
+        const chunks = new Map(result.output.filter((entry) => entry.type === "chunk").map((chunk) => [chunk.fileName, chunk]));
+        const initialChunks = new Set([...chunks.values()].filter((chunk) => chunk.isEntry));
+        for (const chunk of initialChunks) {
+            expect(chunk.code.includes("xhr2")).toBe(false);
+            for (const importedFile of chunk.imports) {
+                const importedChunk = chunks.get(importedFile);
+                if (importedChunk) {
+                    initialChunks.add(importedChunk);
+                }
+            }
+        }
     }, 120_000);
 
     it("tree-shakes KTX2 decoder code from an encoder-only published consumer", async () => {
