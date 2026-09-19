@@ -36,8 +36,6 @@ OBJ texture paths are relative to the OBJ directory, even when its MTL is in a
 subdirectory; redirects do not rebase dependency paths. Headless export requires
 encoded images that Babylon's serializer can preserve, such as PNG and JPEG.
 There is no automatic TGA/BMP/GIF conversion or extensionless-image MIME repair.
-The [Babylon loader gaps](babylon-loader-gaps.md) document lists the upstream
-locations for these removed workarounds.
 
 STL, OBJ, and FBX also accept Babylon-supported data URIs. A data URI has no
 filesystem or HTTP base directory for relative dependencies. The glTF block
