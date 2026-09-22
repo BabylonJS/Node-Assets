@@ -8,7 +8,7 @@ import { codecBuildPlugin } from "./packages/core/build/codecBuildPlugin";
 // those codecs are implemented; do not use Vitest browser mode. Babylon.js and
 // Babylon-Lite use this configuration.
 export default defineConfig({
-    plugins: [codecBuildPlugin()],
+    plugins: [codecBuildPlugin("packages/core")],
     test: {
         environment: "node",
         include: ["tests/**/*.test.ts"],

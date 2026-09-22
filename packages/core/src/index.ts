@@ -7,6 +7,7 @@ export { GltfInputBlock } from "./blocks/gltfInputBlock";
 export { GltfOutputBlock, type GltfOutputBlockOptions } from "./blocks/gltfOutputBlock";
 export { ObjInputBlock } from "./blocks/objInputBlock";
 export { StlInputBlock } from "./blocks/stlInputBlock";
+export { UsdInputBlock } from "./blocks/usdInputBlock";
 export { ValidateBlock, type ValidateBlockOptions } from "./blocks/validateBlock";
 export { NodeAsset } from "./nodeAsset";
 export { NodeAssetContext } from "./nodeAssetContext";

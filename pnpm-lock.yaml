@@ -9,11 +9,11 @@ importers:
   .:
     devDependencies:
       '@babylonjs/core':
-        specifier: 9.21.2
-        version: 9.21.2
+        specifier: 9.27.1
+        version: 9.27.1
       '@babylonjs/ktx2decoder':
-        specifier: 9.21.2
-        version: 9.21.2(@babylonjs/core@9.21.2)
+        specifier: 9.27.1
+        version: 9.27.1(@babylonjs/core@9.27.1)
       '@babylonjs/node-assets':
         specifier: workspace:*
         version: link:packages/core
@@ -78,17 +78,17 @@ importers:
   packages/core:
     dependencies:
       '@babylonjs/core':
-        specifier: ^9.21.2
-        version: 9.21.2
+        specifier: ^9.27.1
+        version: 9.27.1
       '@babylonjs/ktx2decoder':
-        specifier: 9.21.2
-        version: 9.21.2(@babylonjs/core@9.21.2)
+        specifier: 9.27.1
+        version: 9.27.1(@babylonjs/core@9.27.1)
       '@babylonjs/loaders':
-        specifier: ^9.21.2
-        version: 9.21.2(@babylonjs/core@9.21.2)(babylonjs-gltf2interface@9.21.2)
+        specifier: ^9.27.1
+        version: 9.27.1(@babylonjs/core@9.27.1)(babylonjs-gltf2interface@9.21.2)
       '@babylonjs/serializers':
-        specifier: ^9.21.2
-        version: 9.21.2(@babylonjs/core@9.21.2)(babylonjs-gltf2interface@9.21.2)
+        specifier: ^9.27.1
+        version: 9.27.1(@babylonjs/core@9.27.1)(babylonjs-gltf2interface@9.21.2)
       '@gltf-transform/core':
         specifier: 4.5.0
         version: 4.5.0
@@ -139,22 +139,22 @@ packages:
     resolution: {integrity: sha512-Vj1jF3cPfxg7OAfoI7QnVKLoILlm2JF9pnVHrX8qx7AHMiYWT+NDAA7jChlNgRS4WTLc/fD1lXLmPixluj+3Gg==}
     engines: {node: '>=6.9.0'}
 
-  '@babylonjs/core@9.21.2':
-    resolution: {integrity: sha512-y4brONcZ4X5rfoiLqTdd9jSZzyIeJ+zHhvN6qgDCpgVIyM2sJlCouLBSvNn+Kl7jIxmzJhIvbBvUIS/sx8jFUw==}
+  '@babylonjs/core@9.27.1':
+    resolution: {integrity: sha512-bcHeB7YNrYRiD+pEhZjEfzm8tT/N4dC8oYhlENFVa9fnP/XiHEbmt7h2U6Es/vs8x/Aju+9vgpcmq2qnLv+3Hw==}
 
-  '@babylonjs/ktx2decoder@9.21.2':
-    resolution: {integrity: sha512-G5DAxbkIVHQKAvDXvnDvH/PFWdi1PkjsTrDVNQux1+S6IG+EYrkyqt3EqFBLeprzyYoiV20r1g2wrOFCVslshA==}
+  '@babylonjs/ktx2decoder@9.27.1':
+    resolution: {integrity: sha512-Cf7wmGWn/IxcD6rcPZPySNpQ44FmjoTty2t8LXEFAxuk11LxUy2x1F6EJcXgz94ecZ1dw7t7NEknAjkq0D/OLA==}
     peerDependencies:
       '@babylonjs/core': ^9.0.0
 
-  '@babylonjs/loaders@9.21.2':
-    resolution: {integrity: sha512-ZPfVpNBbxZhL3Xns355gyIFBfEgq4qGAbW/Rf5rwvkivTbQcKQRTmp+GTieTdPtEcPGBTSBVFnr/LioKEmJlvQ==}
+  '@babylonjs/loaders@9.27.1':
+    resolution: {integrity: sha512-BCtnH4OuCiq7XPNENsOPyNBRGOBRlVbld49YwMIalbNjjgcAMMtk+wx8kzE1/ywKF3Hfrjr17bMLT3qgmJZ42g==}
     peerDependencies:
       '@babylonjs/core': ^9.0.0
       babylonjs-gltf2interface: ^9.0.0
 
-  '@babylonjs/serializers@9.21.2':
-    resolution: {integrity: sha512-qbBMUQDCRrv5RBIj5/JZY1lFVGOGHDQ7xbBVcKibT1cSXBXU1bkXHAAEa/ATOa+N3m6YgPBAAxe8yQ9C/cZJ6Q==}
+  '@babylonjs/serializers@9.27.1':
+    resolution: {integrity: sha512-mMdS8TXMOPxVaTph4Wmi1dbvJo/so5V5FMs8ob3uAL6QntB2Twg4P2BO5EhORvSj09gH4NYX4lh1F1zKbk8s0A==}
     peerDependencies:
       '@babylonjs/core': ^9.0.0
       babylonjs-gltf2interface: ^9.0.0
@@ -1715,20 +1715,20 @@ snapshots:
       '@babel/helper-string-parser': 7.29.7
       '@babel/helper-validator-identifier': 7.29.7
 
-  '@babylonjs/core@9.21.2': {}
+  '@babylonjs/core@9.27.1': {}
 
-  '@babylonjs/ktx2decoder@9.21.2(@babylonjs/core@9.21.2)':
+  '@babylonjs/ktx2decoder@9.27.1(@babylonjs/core@9.27.1)':
     dependencies:
-      '@babylonjs/core': 9.21.2
+      '@babylonjs/core': 9.27.1
 
-  '@babylonjs/loaders@9.21.2(@babylonjs/core@9.21.2)(babylonjs-gltf2interface@9.21.2)':
+  '@babylonjs/loaders@9.27.1(@babylonjs/core@9.27.1)(babylonjs-gltf2interface@9.21.2)':
     dependencies:
-      '@babylonjs/core': 9.21.2
+      '@babylonjs/core': 9.27.1
       babylonjs-gltf2interface: 9.21.2
 
-  '@babylonjs/serializers@9.21.2(@babylonjs/core@9.21.2)(babylonjs-gltf2interface@9.21.2)':
+  '@babylonjs/serializers@9.27.1(@babylonjs/core@9.27.1)(babylonjs-gltf2interface@9.21.2)':
     dependencies:
-      '@babylonjs/core': 9.21.2
+      '@babylonjs/core': 9.27.1
       babylonjs-gltf2interface: 9.21.2
 
   '@emnapi/runtime@1.11.3':

@@ -23,6 +23,11 @@
     - Output: `Document`
     - Uses: Babylon STL loader
     - Behavior: Uses the Babylon scene loader to load an STL using NullEngine, exports it as a GLB, then reimports the bytes as a `Document`.
+- `UsdInputBlock`
+    - Input: `string` HTTP(S) or data URL, or a Node filesystem path/file URL, pointing to a USD, USDA, USDC, or USDZ file.
+    - Output: `Document`
+    - Uses: Babylon USD loader and the packaged OpenUSD importer runtime; requires Web Worker support.
+    - Behavior: Uses the Babylon scene loader to load USD using NullEngine, exports it as a GLB, then reimports the bytes as a `Document`.
 
 # Transforms
 
