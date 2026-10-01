@@ -1,4 +1,5 @@
 export { StripMaterialsBlock, type StripMaterialsBlockOptions } from "./blocks/stripMaterialsBlock";
+export { CullUnusedBlock } from "./blocks/cullUnusedBlock";
 export { EncodeDracoBlock } from "./blocks/encodeDracoBlock";
 export { EncodeKTX2Block } from "./blocks/encodeKtx2Block";
 export { EncodeMeshoptBlock } from "./blocks/encodeMeshoptBlock";
@@ -6,6 +7,7 @@ export { FbxInputBlock } from "./blocks/fbxInputBlock";
 export { GltfInputBlock } from "./blocks/gltfInputBlock";
 export { GltfOutputBlock, type GltfOutputBlockOptions } from "./blocks/gltfOutputBlock";
 export { ObjInputBlock } from "./blocks/objInputBlock";
+export { QuantizeBlock } from "./blocks/quantizeBlock";
 export { StlInputBlock } from "./blocks/stlInputBlock";
 export { ValidateBlock, type ValidateBlockOptions } from "./blocks/validateBlock";
 export { NodeAsset } from "./nodeAsset";
