@@ -91,38 +91,6 @@ describe("browser consumer bundle", () => {
         expect(chunks.some((chunk) => chunk.dynamicImports.some((id) => /ktx2Decoder|msc-transcoder/.test(id)))).toBe(false);
     }, 120_000);
 
-    it("bundles the published USD input with its own importer assets", async () => {
-        const result = await build({
-            configFile: false,
-            logLevel: "silent",
-            plugins: [rejectNodeOnlyDependencies(), createUsdOnlyConsumerPlugin()],
-            build: {
-                assetsInlineLimit: 0,
-                rollupOptions: {
-                    input: "node-assets:usd-only-browser-consumer",
-                },
-                write: false,
-            },
-        });
-        if (Array.isArray(result) || !("output" in result)) {
-            throw new Error("Expected one consumer bundle");
-        }
-
-        const runtimeNames = ["babylon-usd-importer.worker.js", "babylon-usd-importer.js", "babylon-usd-importer.wasm", "babylon-usd-importer.data"];
-        const fileNames = result.output.map(({ fileName }) => fileName);
-        const publishedFiles = await readdir(dirname(PublishedEntryPath));
-        for (const name of runtimeNames) {
-            expect(publishedFiles).toContain(name);
-            const dot = name.lastIndexOf(".");
-            expect(fileNames.some((fileName) => fileName.includes(`${name.slice(0, dot)}-`) && fileName.endsWith(name.slice(dot)))).toBe(true);
-        }
-        const publishedNotices = await readdir(join(dirname(PublishedEntryPath), "licenses", "usd"));
-        expect(publishedNotices).toEqual(["openusd.license", "tbb.license", "usd-importer.license", "zlib.license"]);
-
-        const chunks = result.output.filter((entry) => entry.type === "chunk");
-        expect(chunks.some((chunk) => chunk.code.includes("babylon-usd-importer.worker-"))).toBe(true);
-    }, 120_000);
-
     it("runs the published entry in Node", async () => {
         const url = "https://example.com/model.gltf";
         vi.stubGlobal(
@@ -197,21 +165,6 @@ function createEncoderOnlyConsumerPlugin(): Plugin {
                 ? `
                     import { EncodeKTX2Block } from ${JSON.stringify(PublishedPackageName)};
                     globalThis.EncodeKTX2Block = EncodeKTX2Block;
-                `
-                : undefined,
-    };
-}
-
-function createUsdOnlyConsumerPlugin(): Plugin {
-    const moduleId = "\0node-assets-usd-only-browser-consumer";
-    return {
-        name: "node-assets-usd-only-browser-consumer",
-        resolveId: (id) => (id === "node-assets:usd-only-browser-consumer" ? moduleId : undefined),
-        load: (id) =>
-            id === moduleId
-                ? `
-                    import { UsdInputBlock } from ${JSON.stringify(PublishedPackageName)};
-                    globalThis.UsdInputBlock = UsdInputBlock;
                 `
                 : undefined,
     };

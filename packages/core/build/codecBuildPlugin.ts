@@ -14,10 +14,10 @@ const UsdRuntimeUrlsModuleId = "virtual:node-assets-usd-runtime-urls";
 const ResolvedUsdRuntimeUrlsModuleId = `\0${UsdRuntimeUrlsModuleId}`;
 const DracoNodeRuntimeDetection = /"object"==typeof process&&"object"==typeof process\.versions&&"string"==typeof process\.versions\.node/g;
 
-export function codecBuildPlugin(usdPackageDirectory = "."): Plugin {
+export function codecBuildPlugin(): Plugin {
     let resolvePackage: ReturnType<ResolvedConfig["createResolver"]> | undefined;
     let isBuild = false;
-    let usdCacheDirectory: string;
+    const usdCacheDirectory = fileURLToPath(new URL("../.cache/usd/5/", import.meta.url));
     let usdFiles: ReturnType<typeof prepareUsdRuntimeAsync> | undefined;
     const prepareUsdAsync = () => (usdFiles ??= prepareUsdRuntimeAsync(usdCacheDirectory));
     return {
@@ -26,7 +26,6 @@ export function codecBuildPlugin(usdPackageDirectory = "."): Plugin {
         configResolved(config) {
             resolvePackage = config.createResolver();
             isBuild = config.command === "build";
-            usdCacheDirectory = resolve(config.root, usdPackageDirectory, ".cache/usd/5");
         },
         async resolveId(id) {
             if (id === MscTranscoderModuleId) {
@@ -85,10 +84,10 @@ export function codecBuildPlugin(usdPackageDirectory = "."): Plugin {
             return { code: transformed, map: null };
         },
         async generateBundle() {
-            if (!isBuild) {
+            if (!usdFiles) {
                 return;
             }
-            const files = await prepareUsdAsync();
+            const files = await usdFiles;
             for (const { name } of UsdRuntimeNotices) {
                 const path = files.get(name);
                 if (!path) {

@@ -26,8 +26,7 @@
         "asset-pipeline",
         "draco",
         "meshopt",
-        "ktx2",
-        "usd"
+        "ktx2"
     ],
     "repository": {
         "type": "git",

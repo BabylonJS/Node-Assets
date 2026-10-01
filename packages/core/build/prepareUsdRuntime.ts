@@ -34,7 +34,7 @@ export async function prepareUsdRuntimeAsync(cacheDirectory: string): Promise<Ma
                 }
             }
             if (bytes === undefined) {
-                const response = await fetch(source);
+                const response = await fetch(source, { signal: AbortSignal.timeout(60_000) });
                 if (!response.ok) {
                     throw new Error(`Unable to download USD runtime asset "${name}": ${response.status} ${response.statusText}`);
                 }
