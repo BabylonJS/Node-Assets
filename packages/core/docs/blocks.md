@@ -31,6 +31,16 @@
     - Output: `Document`
     - Uses: glTF Transform document graph
     - Behavior: Strips materials, assignments, and newly unused textures.
+- `CullUnusedBlock`
+    - Input: `Document`
+    - Output: the same `Document`
+    - Uses: glTF Transform `prune()`
+    - Behavior: Removes unused document resources with library-default behavior.
+- `QuantizeBlock`
+    - Input: `Document`
+    - Output: the same `Document`
+    - Uses: glTF Transform `quantize()`; execution-scoped `PlatformIO`
+    - Behavior: Quantizes mesh attributes with library-default behavior.
 - `ValidateBlock`
     - Input: `Document`
     - Output: the same `Document`
