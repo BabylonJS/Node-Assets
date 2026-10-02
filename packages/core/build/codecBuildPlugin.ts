@@ -5,14 +5,21 @@ import { fileURLToPath } from "node:url";
 
 import type { Plugin, ResolvedConfig } from "vite";
 
+import { prepareUsdRuntimeAsync, UsdRuntimeAssets, UsdRuntimeNotices } from "./prepareUsdRuntime";
+
 export const MscTranscoderModuleId = "virtual:node-assets-msc-transcoder";
 const ResolvedMscTranscoderModuleId = `\0${MscTranscoderModuleId}`;
 const BasisEncoderWasmUrlModuleId = "virtual:node-assets-basis-encoder-wasm-url";
+const UsdRuntimeUrlsModuleId = "virtual:node-assets-usd-runtime-urls";
+const ResolvedUsdRuntimeUrlsModuleId = `\0${UsdRuntimeUrlsModuleId}`;
 const DracoNodeRuntimeDetection = /"object"==typeof process&&"object"==typeof process\.versions&&"string"==typeof process\.versions\.node/g;
 
 export function codecBuildPlugin(): Plugin {
     let resolvePackage: ReturnType<ResolvedConfig["createResolver"]> | undefined;
     let isBuild = false;
+    const usdCacheDirectory = fileURLToPath(new URL("../.cache/usd/5/", import.meta.url));
+    let usdFiles: ReturnType<typeof prepareUsdRuntimeAsync> | undefined;
+    const prepareUsdAsync = () => (usdFiles ??= prepareUsdRuntimeAsync(usdCacheDirectory));
     return {
         name: "node-assets-codecs",
         enforce: "pre",
@@ -24,6 +31,9 @@ export function codecBuildPlugin(): Plugin {
             if (id === MscTranscoderModuleId) {
                 return ResolvedMscTranscoderModuleId;
             }
+            if (id === UsdRuntimeUrlsModuleId) {
+                return ResolvedUsdRuntimeUrlsModuleId;
+            }
             if (id === BasisEncoderWasmUrlModuleId) {
                 // TODO: Remove this override when the encoder keeps its relative WASM URL valid after Vite pre-bundling.
                 const encoderEntry = await resolvePackage?.("babylonpress-ktx2-encoder", fileURLToPath(import.meta.url));
@@ -34,6 +44,17 @@ export function codecBuildPlugin(): Plugin {
             }
         },
         async load(id) {
+            if (id === ResolvedUsdRuntimeUrlsModuleId) {
+                const files = await prepareUsdAsync();
+                const urls = UsdRuntimeAssets.map(({ name, option }, index) => {
+                    const path = files.get(name);
+                    if (!path) {
+                        throw new Error(`Missing USD runtime asset "${name}".`);
+                    }
+                    return { import: `import asset${index} from ${JSON.stringify(`${path}?url&no-inline`)};`, option: `${option}: asset${index}` };
+                });
+                return [...urls.map((url) => url.import), `export default { ${urls.map((url) => url.option).join(", ")} };`].join("\n");
+            }
             if (id !== ResolvedMscTranscoderModuleId) {
                 return;
             }
@@ -61,6 +82,19 @@ export function codecBuildPlugin(): Plugin {
                 throw new Error(`Unable to replace the Draco runtime detection in "${id}".`);
             }
             return { code: transformed, map: null };
+        },
+        async generateBundle() {
+            if (!usdFiles) {
+                return;
+            }
+            const files = await usdFiles;
+            for (const { name } of UsdRuntimeNotices) {
+                const path = files.get(name);
+                if (!path) {
+                    throw new Error(`Missing USD runtime notice "${name}".`);
+                }
+                this.emitFile({ type: "asset", fileName: `licenses/usd/${name}`, source: await readFile(path) });
+            }
         },
     };
 }

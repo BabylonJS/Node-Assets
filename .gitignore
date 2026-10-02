@@ -8,6 +8,7 @@ packages/core/docs/typedocs
 test-results/
 *.tsbuildinfo
 .vite/
+packages/core/.cache/usd/
 
 .env.local
 .DS_Store

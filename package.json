@@ -20,8 +20,8 @@
         "typedocs": "pnpm --filter @babylonjs/node-assets typedocs"
     },
     "devDependencies": {
-        "@babylonjs/core": "9.21.2",
-        "@babylonjs/ktx2decoder": "9.21.2",
+        "@babylonjs/core": "9.27.1",
+        "@babylonjs/ktx2decoder": "9.27.1",
         "@babylonjs/node-assets": "workspace:*",
         "@eslint/js": "^10.0.1",
         "@gltf-transform/core": "4.5.0",

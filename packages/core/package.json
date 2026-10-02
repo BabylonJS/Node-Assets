@@ -45,10 +45,10 @@
         "typedocs": "typedoc"
     },
     "dependencies": {
-        "@babylonjs/core": "^9.21.2",
-        "@babylonjs/ktx2decoder": "9.21.2",
-        "@babylonjs/loaders": "^9.21.2",
-        "@babylonjs/serializers": "^9.21.2",
+        "@babylonjs/core": "^9.27.1",
+        "@babylonjs/ktx2decoder": "9.27.1",
+        "@babylonjs/loaders": "^9.27.1",
+        "@babylonjs/serializers": "^9.27.1",
         "@gltf-transform/core": "4.5.0",
         "@gltf-transform/extensions": "4.5.0",
         "@gltf-transform/functions": "4.5.0",

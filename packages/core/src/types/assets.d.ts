@@ -12,3 +12,8 @@ declare module "virtual:node-assets-basis-encoder-wasm-url" {
     const url: string;
     export default url;
 }
+
+declare module "virtual:node-assets-usd-runtime-urls" {
+    const urls: { readonly workerUrl: string; readonly glueUrl: string; readonly wasmUrl: string; readonly dataUrl: string };
+    export default urls;
+}
