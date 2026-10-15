@@ -1,5 +1,6 @@
-import { stat, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { randomUUID } from "node:crypto";
+import { lstat, rename, rm, stat, writeFile } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 
 import { version } from "../package.json";
@@ -15,6 +16,7 @@ export async function runCliAsync(args: string[]): Promise<void> {
         options: {
             help: { type: "boolean", short: "h" },
             version: { type: "boolean", short: "v" },
+            force: { type: "boolean", short: "f" },
             stats: { type: "boolean" },
             benchmark: { type: "boolean" },
         },
@@ -44,13 +46,25 @@ export async function runCliAsync(args: string[]): Promise<void> {
     if (!inputFile.isFile()) {
         throw new Error(`Input is not a regular file: ${inputPath}`);
     }
+    const outputFile = await stat(outputPath).catch(ignoreMissing);
+    if (outputFile?.dev === inputFile.dev && outputFile.ino === inputFile.ino) {
+        throw new Error(`Output is the input file: ${outputPath}`);
+    }
+    const outputEntry = await lstat(outputPath).catch(ignoreMissing);
+    if (outputEntry !== undefined && !values.force) {
+        throw new Error(`Output already exists: ${outputPath}. Use --force to replace it.`);
+    }
+    if (outputEntry !== undefined && !outputEntry.isFile() && !outputEntry.isSymbolicLink()) {
+        throw new Error(`Output is not a regular file: ${outputPath}`);
+    }
 
     const finishBenchmark = values.benchmark ? startBenchmark() : undefined;
     const asset = await createPipelineAsync({ inputPath, outputPath, blockNames: remaining });
     let outputSize: number;
     try {
         const file = await asset.executeAsync();
-        await writeFile(outputPath, new Uint8Array(await file.arrayBuffer()), { flag: "wx" });
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        await (values.force ? replaceFileAsync(outputPath, bytes) : writeFile(outputPath, bytes, { flag: "wx" }));
         outputSize = file.size;
     } finally {
         asset.dispose();
@@ -67,12 +81,31 @@ export async function runCliAsync(args: string[]): Promise<void> {
     }
 }
 
+function ignoreMissing(error: unknown): undefined {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        throw error;
+    }
+    return undefined;
+}
+
+async function replaceFileAsync(path: string, bytes: Uint8Array): Promise<void> {
+    // Renaming swaps the directory entry, so files linked to the old output are never written.
+    const temporaryPath = join(dirname(path), `.${randomUUID()}.tmp`);
+    try {
+        await writeFile(temporaryPath, bytes, { flag: "wx" });
+        await rename(temporaryPath, path);
+    } catch (error) {
+        await rm(temporaryPath, { force: true }).catch(() => undefined);
+        throw error;
+    }
+}
+
 function printHelp(): void {
     const { inputs, outputs, operations } = getPipelineDefinitions();
     const operationNameWidth = Math.max(...operations.map(({ name }) => name.length)) + 2;
     console.log(
         [
-            "Usage: node-assets pipeline <input> [operations...] <output> [--stats] [--benchmark]",
+            "Usage: node-assets pipeline <input> [operations...] <output> [--force] [--stats] [--benchmark]",
             "",
             `Supported file types:`,
             `Input: ${inputs.flatMap(({ extensions }) => extensions).join(", ")}`,
@@ -85,6 +118,7 @@ function printHelp(): void {
             "Options:",
             "  -h, --help     Show this help",
             "  -v, --version  Show the CLI version",
+            "  -f, --force    Replace the output file if it already exists",
             "  --stats       Show named input/output file sizes in readable units",
             "  --benchmark   Show completion time, CPU time, RSS, and heap usage",
             "  --            End options before hyphen-prefixed paths",
