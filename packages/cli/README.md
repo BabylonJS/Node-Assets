@@ -19,7 +19,7 @@ node-assets pipeline model.fbx cull-unused quantize meshopt output.glb
 The command syntax is:
 
 ```text
-node-assets pipeline <input> [operation...] <output> [--stats] [--benchmark]
+node-assets pipeline <input> [operation...] <output> [--force] [--stats] [--benchmark]
 ```
 
 | Element   | Supported values                                                        |
@@ -40,6 +40,23 @@ Without specifying operations, the CLI reads the input and writes it back out as
 Run `node-assets --help` for command help or `node-assets --version` for the
 installed version.
 
+### Replacing output
+
+By default, the CLI does not overwrite an existing output file. It stops before
+running the pipeline and reports the error. To replace the file,
+for example when you repeat a benchmark run, add `--force` (or `-f`):
+
+```sh
+node-assets pipeline input.glb draco output.glb --force --benchmark
+```
+
+The CLI replaces the output file only after the pipeline succeeds, so a failed
+run leaves the existing file unchanged. If the output is a symbolic link, the CLI
+replaces the link, not the file it points to. The CLI never replaces the input
+file, even with `--force`. It does not protect the files that a `.gltf` input
+references, such as external buffers and images, so do not name one of them as
+the output.
+
 ### Run reports
 
 ```sh
@@ -58,10 +75,11 @@ Size statistics compare serialized file sizes, not decoded asset sizes. The inpu
 size excludes external buffers and images referenced by a `.gltf` or `.glb` file.
 
 Benchmark timing covers pipeline creation (including library loading), execution,
-output writing, and disposal, but excludes argument parsing, input validation, and
-report printing. CPU times are process-wide and may include worker threads. RSS
-(resident set size) and heap used are process-wide snapshots at completion; peak
-RSS is the process-lifetime high-water mark, not a per-pipeline memory delta.
+output writing, and disposal, but excludes argument parsing, input and output file
+checks, and report printing. CPU times are process-wide and may include worker
+threads. RSS (resident set size) and heap used are process-wide snapshots at
+completion; peak RSS is the process-lifetime high-water mark, not a per-pipeline
+memory delta.
 
 The total size before selects a shared unit for both size totals, using
 1024-based units (B, KiB, MiB, GiB, TiB, PiB). Memory values scale independently.

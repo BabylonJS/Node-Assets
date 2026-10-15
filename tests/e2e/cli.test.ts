@@ -1,4 +1,4 @@
-import { cp, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { cp, link, lstat, mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -58,6 +58,7 @@ describe("Node Assets CLI", () => {
             "quantize",
             "cull-unused",
             "strip-materials",
+            "--force",
             "--stats",
             "--benchmark",
         ]) {
@@ -80,7 +81,7 @@ describe("Node Assets CLI", () => {
             ["pipeline", "input.gltf", "unknown", "output.glb"],
             ["pipeline", "input.gltf", "DRACO", "output.glb"],
             ["pipeline", "--unknown", "input.gltf", "output.glb"],
-            ["pipeline", "input.gltf", "--force", "output.glb"],
+            ["pipeline", "input.gltf", "--unknown", "output.glb"],
             ["pipeline", "input.ply", "output.glb"],
             ["pipeline", "input", "output.glb"],
             ["pipeline", "input.gltf", "output.gltf"],
@@ -455,11 +456,79 @@ describe("Node Assets CLI", () => {
         expect(await readFile(output)).toEqual(original);
     });
 
-    it("does not overwrite the input through an equivalent relative output path", async () => {
+    it.each(["--force", "-f"])("replaces an existing destination with %s", async (flag) => {
+        const cwd = await mkdtemp(join(directory, "force-existing-"));
+        const output = join(cwd, "output.glb");
+        await writeFile(output, "replace this file");
+        const result = await runNodeAsync([launcher, "pipeline", input, output, flag], directory);
+        expect(result.code).toBe(0);
+        expect(result.stdout).toContain(`Wrote ${output}`);
+        expect((await readGlbAsync(output)).json.meshes).toHaveLength(1);
+        expect(await readdir(cwd)).toEqual(["output.glb"]);
+    });
+
+    it("writes a new destination with --force", async () => {
+        const cwd = await mkdtemp(join(directory, "force-new-"));
+        const output = join(cwd, "output.glb");
+        const result = await runNodeAsync([launcher, "pipeline", input, output, "--force"], directory);
+        expect(result.code).toBe(0);
+        expect((await readGlbAsync(output)).json.meshes).toHaveLength(1);
+        expect(await readdir(cwd)).toEqual(["output.glb"]);
+    });
+
+    it("replaces a symbolic link destination with --force without writing its target", async () => {
+        const cwd = await mkdtemp(join(directory, "force-symlink-"));
+        const target = join(cwd, "target.glb");
+        const output = join(cwd, "output.glb");
+        const original = Buffer.from("keep this file");
+        await writeFile(target, original);
+        await symlink(target, output);
+        const result = await runNodeAsync([launcher, "pipeline", input, output, "--force"], directory);
+        expect(result.code).toBe(0);
+        expect((await lstat(output)).isFile()).toBe(true);
+        expect(await readFile(target)).toEqual(original);
+    });
+
+    it("keeps an existing destination when the pipeline fails with --force", async () => {
+        const cwd = await mkdtemp(join(directory, "force-invalid-"));
+        const source = join(cwd, "invalid.gltf");
+        const output = join(cwd, "output.glb");
+        const io = new NodeIO();
+        const document = await io.read(input);
+        document
+            .getRoot()
+            .listAccessors()[2]!
+            .setArray(new Uint16Array([0, 1, 99]));
+        await io.write(source, document);
+        const original = Buffer.from("keep this file");
+        await writeFile(output, original);
+        const before = await readdir(cwd);
+
+        const result = await runNodeAsync([launcher, "pipeline", source, "validate", output, "--force"], directory);
+
+        expect(result.code).toBe(1);
+        expect(result.stdout).not.toContain("Wrote ");
+        expect(await readFile(output)).toEqual(original);
+        expect(await readdir(cwd)).toEqual(before);
+    });
+
+    it.each([[], ["--force"]].map((flags) => ({ flags })))("does not overwrite the input through an equivalent relative output path with $flags", async ({ flags }) => {
         const source = join(directory, "input.glb");
         const original = await readFile(source);
-        const result = await runNodeAsync([launcher, "pipeline", source, relative(directory, source)], directory);
+        const result = await runNodeAsync([launcher, "pipeline", source, relative(directory, source), ...flags], directory);
         expect(result.code).toBe(1);
+        expect(await readFile(source)).toEqual(original);
+    });
+
+    it("does not replace the input through a hard link with --force", async () => {
+        const cwd = await mkdtemp(join(directory, "force-hardlink-"));
+        const source = join(cwd, "input.gltf");
+        await cp(input, source);
+        await link(source, join(cwd, "output.glb"));
+        const original = await readFile(source);
+        const result = await runNodeAsync([launcher, "pipeline", "input.gltf", "output.glb", "--force"], cwd);
+        expect(result.code).toBe(1);
+        expect(result.stderr.trim()).not.toBe("");
         expect(await readFile(source)).toEqual(original);
     });
 
@@ -485,10 +554,10 @@ describe("Node Assets CLI", () => {
         await expect(readdir(parent)).rejects.toThrow();
     });
 
-    it("refuses a directory destination", async () => {
-        const output = join(directory, "destination.glb");
+    it.each([[], ["--force"]].map((flags) => ({ flags })))("refuses a directory destination with $flags", async ({ flags }) => {
+        const output = join(directory, `destination${flags.join("")}.glb`);
         await mkdir(output);
-        const result = await runNodeAsync([launcher, "pipeline", input, output], directory);
+        const result = await runNodeAsync([launcher, "pipeline", input, output, ...flags], directory);
         expect(result.code).toBe(1);
         expect(result.stderr.trim()).not.toBe("");
         expect(await readdir(output)).toEqual([]);

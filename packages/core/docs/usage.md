@@ -43,6 +43,8 @@ totals, using 1024-based units (B, KiB, MiB, GiB, TiB, PiB). Completion time sel
 the unit for all timing rows (ms, s, min, h). Memory values scale independently.
 Times and sizes above bytes use two decimal places; bytes remain whole numbers.
 Unit selection advances to the next unit when rounding reaches its boundary.
+The CLI does not overwrite an existing output file. To repeat a run, such as a
+benchmark, add `--force` to replace the output.
 See the [CLI guide](../../cli/README.md) for command syntax.
 
 # Example: Compressing GLB
